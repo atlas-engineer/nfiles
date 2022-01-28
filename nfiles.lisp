@@ -4,17 +4,16 @@
 (in-package :nfiles)
 
 ;; TODO: Test on file-less content.
-;; TODO: Reindent.
 
 ;; TODO: Make sure existing file is read before writing.
 
 (defclass* profile ()
-    ((name "default"
-           :documentation "The name of the profile to refer it with."))
-    (:export-class-name-p t)
-    (:export-accessor-names-p t)
-    (:accessor-name-transformer (class*:make-name-transformer name))
-    (:documentation "This is the default profile.
+  ((name "default"
+         :documentation "The name of the profile to refer it with."))
+  (:export-class-name-p t)
+  (:export-accessor-names-p t)
+  (:accessor-name-transformer (class*:make-name-transformer name))
+  (:documentation "This is the default profile.
 `file' path expansion is specialized against "))
 
 (defvar *profile-index* (tg:make-weak-hash-table :weakness :key :test 'equal)
@@ -36,44 +35,44 @@ removed.")
 (export-always '*default-profile*)
 (defvar *default-profile* (make-instance 'profile))
 
-(class*:defclass* file ()
-    ((path
-      #p""
-      :type pathname
-      :export nil
-      :initarg nil
-      :documentation "")
-     (profile
-      *default-profile*
-      :type profile
-      :reader t
-      :writer nil
-      :initarg :profile
-      :documentation "The `profile' of the `file'.
+(defclass* file ()
+  ((path
+    #p""
+    :type pathname
+    :export nil
+    :initarg nil
+    :documentation "")
+   (profile
+    *default-profile*
+    :type profile
+    :reader t
+    :writer nil
+    :initarg :profile
+    :documentation "The `profile' of the `file'.
 File expansion is performed against it.
 The profile is only set at instantiation time.")
-     (name
-      ""
-      :type string
-      :documentation "Name used to identify the object in a human-readable manner.")
-     (timeout                           ; Unexport? Make global option?
-      0.1
-      :type real
-      :documentation "Time in seconds to wait for other write requests.")
-     (writable                          ; TODO: Remove?
-      t
-      :type boolean
-      :documentation "If T, the file is writable.
+   (name
+    ""
+    :type string
+    :documentation "Name used to identify the object in a human-readable manner.")
+   (timeout                             ; Unexport? Make global option?
+    0.1
+    :type real
+    :documentation "Time in seconds to wait for other write requests.")
+   (writable                            ; TODO: Remove?
+    t
+    :type boolean
+    :documentation "If T, the file is writable.
 If NIL, then attempting to write to the file raises an error."))
-    (:export-class-name-p t)
-    (:export-accessor-names-p t)
-    (:accessor-name-transformer (class*:make-name-transformer name))
-    (:documentation "TODO: complete me!"))
+  (:export-class-name-p t)
+  (:export-accessor-names-p t)
+  (:accessor-name-transformer (class*:make-name-transformer name))
+  (:documentation "TODO: complete me!"))
 
 (defclass* lisp-file (file)
-    ()
-    (:export-class-name-p t)
-    (:documentation "Like regular `file' but assume a `.lisp' extension, even if
+  ()
+  (:export-class-name-p t)
+  (:documentation "Like regular `file' but assume a `.lisp' extension, even if
 not provided."))
 
 (defclass* config-file (file)
@@ -186,22 +185,22 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
 
 ;; TODO: How do we garbage collect cache entries?
 
-(defclass* cache-entry ()               ; TODO: Rename?
-    ((source-file
-      (error "Source file must be given.")
-      :type file
-      :documentation "This is the `file' object that was used to instantiate the
+(defclass* cache-entry ()                ; TODO: Rename?
+  ((source-file
+    (error "Source file must be given.")
+    :type file
+    :documentation "This is the `file' object that was used to instantiate the
 entry's `cached-value'. ")
-     (cached-value                      ; TODO: Rename to `content'?
-      nil
-      :type t)
-     (worker
-      nil
-      :type (or null bt:thread))
-     (worker-notifier
-      nil
-      :type (or null bt:semaphore)))
-    (:accessor-name-transformer (class*:make-name-transformer name)))
+   (cached-value                        ; TODO: Rename to `content'?
+    nil
+    :type t)
+   (worker
+    nil
+    :type (or null bt:thread))
+   (worker-notifier
+    nil
+    :type (or null bt:semaphore)))
+  (:accessor-name-transformer (class*:make-name-transformer name)))
 
 (defmethod initialize-instance :after ((entry cache-entry) &key)
   (setf (cached-value entry)
