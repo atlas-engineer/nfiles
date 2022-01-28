@@ -3,33 +3,47 @@
 NFiles is a Common Lisp library to help manage file persistence and loading, in
 particular user-generated files like configuration files and cache files.
 
-Features:
+** Goals
+
+- Performance:
+  - Data is not persisted to disk if it does not need to.
+  - Files are read only once.
+- Extensibility:
+  Persist any data structure the way you want it.
+- Reliability: no corruption and no data loss should occur.
+
+** Features
 
 - Dynamic and customizable path expansion.
-- Extensible serialization.
+- Extensible serialization and deserialization.
 - Cached reads and writes.
   When a =file= object expands to the same path as another one, a =read= or
   =write= on it won't do anything in case there was no change since last write.
 - On-the-fly PGP encryption.
 - Profile support.
-- Backup management.
+- On read error, existing files are backed up.
+- On write error, no file is written to disk.
 
-# TODO: On-the-fly compression?
+# TODO: On-the-fly compression?  Users should prefer compression at the level of
+# the file system.
 
 ** Why?
+
+This package was developed after dealing with a pickle when delivering Common
+Lisp images.
 
 When an image is generated, path expansion may already be resolved and thus
 hard-coded within the image, which makes it unfit for delivery.  Consider this:
 
-```lisp
+#+begin_src lisp
 > (defvar *foo-path* (uiop:xdg-config-home))
 *FOO-PATH*
 > *foo-path*
 #P"/home/ambrevar/.config/"
-```
+#+end_src
 
 Now if I ship this image to my friend Kaboom, =*foo-path*= will expand to
-=#P"/home/ambrevar/.config/"= on their machine instead of the expected
+~#P"/home/ambrevar/.config/"~ on their machine instead of the expected
 =#P"/home/kaboom/.config/"=.
 
 ** Examples
