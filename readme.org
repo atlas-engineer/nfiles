@@ -49,3 +49,7 @@ Now if I ship this image to my friend Kaboom, =*foo-path*= will expand to
 ** Examples
 
 # TODO: Finish!
+
+** Roadmap
+
+- Support OS-level locks (à-la Emacs / LibreOffice).
