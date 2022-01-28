@@ -33,6 +33,22 @@
     (uiop:with-current-directory ((uiop:temporary-directory))
       (isnt (nfiles:expand file) old-path))))
 
+(defclass* myapp-file (nfiles:file)
+    ())
+
+(defmethod nfiles:resolve ((profile nfiles:profile) (file myapp-file))
+  (let ((path (call-next-method)))
+    (make-pathname :defaults path
+                   :directory (pathname-directory (uiop:merge-pathnames* "myapp/" (uiop:pathname-directory-pathname path))))))
+
+(defclass* myapp-config-file (myapp-file nfiles:lisp-file nfiles:config-file)
+    ())
+
+(nfile-test "Application config file"
+  (let ((file (make-instance 'myapp-config-file :path "init")))
+    (is (nfiles:expand file)
+        (uiop:xdg-config-home "myapp/init.lisp"))))
+
 (nfile-test "Simple write"
   (let ((file (make-instance 'nfiles:file :path "foo"))
         (test-content "Hello world!"))

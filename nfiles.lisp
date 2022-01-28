@@ -76,6 +76,11 @@ If NIL, then attempting to write to the file raises an error."))
     (:documentation "Like regular `file' but assume a `.lisp' extension, even if
 not provided."))
 
+(defclass* config-file (file)
+  ()
+  (:export-class-name-p t)
+  (:documentation "Like regular `file' but set directory to `uiop:xdg-config-home'."))
+
 (defvar *index* (tg:make-weak-hash-table :weakness :key :test 'equal)
   "Set of all `file's objects.
 It's a weak hash table to that garbage-collected files are automatically
@@ -91,18 +96,25 @@ removed.")
 ;;         when (string= name (name profile))
 ;;           return profile))
 
+(export-always 'resolve)
+(defgeneric resolve (profile file)
+  (:method ((profile profile) (file file))
+    (path file))
+  (:documentation "Return the final expanded path foe `file' depending on its `profile'.
+This method is meant to be specialized against the user-defined `profile's and `file's.
+See `expand' for a convenience wrapper."))
+
 (defmethod resolve :around ((profile profile) (file file))
-  "Default path resolution."
+  "Clean up the result before returning it."
   ;; TODO: Make sure native pathnames like "[" are not problematic.
   (uiop:ensure-pathname (call-next-method)
                         :truenamize t))
 
-(defmethod resolve ((profile profile) (file file))
-  "Default path resolution."
-  (path file))
-
 (defmethod resolve ((profile profile) (file lisp-file))
   (make-pathname :defaults (call-next-method) :type "lisp"))
+
+(defmethod resolve ((profile profile) (file config-file))
+  (uiop:xdg-config-home (call-next-method)))
 
 ;; TODO: Make defgenerics with doc.
 
@@ -161,7 +173,8 @@ removed.")
 (export-always 'expand)
 (-> expand (file) (values pathname &optional))
 (defun expand (file)
-  "Return the pathname corresponding to FILE and its `profile'."
+  "Return the pathname corresponding to FILE and its `profile'.
+It's a convenience wrapper around `resolve' (to avoid specifying the `profile')."
   (the (values pathname &optional)
        (resolve (profile file) file)))
 
