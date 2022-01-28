@@ -5,16 +5,18 @@
 
 ;; TODO: Test on file-less content.
 
-;; TODO: Make sure existing file is read before writing.
-
 (defclass* profile ()
   ((name "default"
+         :type string
          :documentation "The name of the profile to refer it with."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
   (:documentation "This is the default profile.
-`file' path expansion is specialized against "))
+Subclass this profile to make your own, possibly carrying more data.
+
+`file' path expansion is specialized against its `profile' slot throught the
+`resolve' method."))
 
 (defvar *profile-index* (tg:make-weak-hash-table :weakness :key :test 'equal)
   "Set of all `profile's objects.
@@ -67,7 +69,11 @@ If NIL, then attempting to write to the file raises an error."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
-  (:documentation "The main object to manipulate and subclass."))
+  (:documentation "The main object to manipulate and subclass.
+The `profile' slot can be used to drive the specializations of multiple `file' methods.
+See `resolve', `serialize', `etc'.
+
+The `name' slot can be used to refer to `file' objects in a human-readable fashion."))
 
 (defclass* lisp-file (file)
   ()
@@ -115,30 +121,43 @@ See `expand' for a convenience wrapper."))
 (defmethod resolve ((profile profile) (file config-file))
   (uiop:xdg-config-home (call-next-method)))
 
-;; TODO: Make defgenerics with doc.
-
 ;; TODO: Does it make sense to serialize / deserialize over a profile?
 ;; Yes, because this is where we chose to not touch the filesystem, or to be read-only.
 ;; Now that we have `read' and `write', maybe not so much.
 ;; But who knows... Plus for consistency with other methods, we can keep the same parameters.
 
 (export-always 'deserialize)
-(defmethod deserialize ((profile profile) (file file) content)
-  content)
+(defgeneric deserialize (profile file raw-content)
+  (:method ((profile profile) (file file) raw-content)
+    raw-content)
+  (:documentation "Transform raw-content into a useful form ready to be
+  manipulated on the Lisp side.
+See `serialize' for the reverse action."))
 
 (defmethod deserialize ((profile profile) (file lisp-file) content)
   (read-from-string (call-next-method)))
 
 ;; TODO: Can serialization methods be compounded?
 (export-always 'serialize)
-(defmethod serialize ((profile profile) (file file))
-  (princ-to-string (content file)))
+(defgeneric serialize (profile file)
+  (:method ((profile profile) (file file))
+      (princ-to-string (content file)))
+  (:documentation "Transform `file' content into a string meant to be persisted
+to a file.
+
+See `deserialize' for the reverse action."))
 
 (defmethod serialize ((profile profile) (file lisp-file))
   (write-to-string (content file)))
 
 ;; TODO: Add support for streams.
+(export-always 'write-file)
+(defgeneric write-file (profile file)
+  (:documentation "Persist FILE to disk.
+See `read-file' for the reverse action."))
+
 (defmethod write-file ((profile profile) (file file))
+  "Write the result of `serialize' to the `file' path."
   ;; TODO: Handle .gpg files.
   (let ((destination (expand file)))
     ;; TODO: Preserve permissions.
@@ -158,7 +177,14 @@ See `expand' for a convenience wrapper."))
              temp-path)))
     (uiop:rename-file-overwriting-target path temp-path)))
 
+(export-always 'read-file)
+(defgeneric read-file (profile file)
+  (:documentation "Load FILE from disk.
+See `write-file' for the reverse action."))
+
 (defmethod read-file ((profile profile) (file file))
+  "Load FILE then return the result of the call to `deserialize' on it.
+On failure, create a backup of the file."
   (let ((path (expand file)))
     (when (uiop:file-exists-p path)
       (handler-case
