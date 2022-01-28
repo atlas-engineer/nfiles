@@ -12,44 +12,44 @@
 
 ;; TODO: Clean up test folder on exit.
 
-(defvar *test-dir* (ensure-directories-exist
-                    (uiop:ensure-pathname
-                     (uiop:merge-pathnames* "nfiles/" (uiop:temporary-directory)))))
+(defvar *test-dir* (uiop:ensure-pathname
+                    (uiop:merge-pathnames* "nfiles/" (uiop:temporary-directory))))
 
-(subtest "Simple path check"
-  (uiop:with-current-directory (*test-dir*)
-    (let ((file (make-instance 'nfiles:file :path "foo" )))
-      (is (nfiles:expand file)
-          (uiop:merge-pathnames* "foo" *test-dir*)
-          :test 'uiop:pathname-equal))))
+(defmacro nfile-test (name &body body)
+  `(subtest ,name
+     (clrhash nfiles::*cache*)
+     (unwind-protect
+          (uiop:with-current-directory ((ensure-directories-exist *test-dir*))
+            ,@body)
+       (uiop:delete-directory-tree *test-dir* :validate t))))
 
-(subtest "Simple write"
-  (uiop:with-current-directory (*test-dir*)
-    (clrhash nfiles::*cache*)
-    (let ((file (make-instance 'nfiles:file :path "foo"))
-          (test-content "Hello world!"))
-      (setf (nfiles:content file) test-content)
-      (sleep 1)                         ; Wait for file write.
-      (is (alexandria:read-file-into-string (nfiles:expand file))
-          test-content)
-      (is (nfiles:content file)
-          test-content))))
+(nfile-test "Simple path check"
+  (let ((file (make-instance 'nfiles:file :path "foo" )))
+    (is (nfiles:expand file)
+        (uiop:merge-pathnames* "foo" *test-dir*)
+        :test 'uiop:pathname-equal)))
 
-(subtest "Read non-existing file"
-  (uiop:with-current-directory (*test-dir*)
-    (clrhash nfiles::*cache*)
-    (let ((file (make-instance 'nfiles:file :path "bar")))
-      (is (nfiles:content file)
-          nil))))
+(nfile-test "Simple write"
+  (let ((file (make-instance 'nfiles:file :path "foo"))
+        (test-content "Hello world!"))
+    (setf (nfiles:content file) test-content)
+    (sleep 1)                           ; Wait for file write.
+    (is (alexandria:read-file-into-string (nfiles:expand file))
+        test-content)
+    (is (nfiles:content file)
+        test-content)))
 
-(subtest "Cache"
-  (uiop:with-current-directory (*test-dir*)
-    (clrhash nfiles::*cache*)
-    (let ((file1 (make-instance 'nfiles:file :path "baz"))
-          (file2 (make-instance 'nfiles:file :path "baz"))
-          (test-content "Cache test"))
-      (setf (nfiles:content file1) test-content)
-      (is (nfiles:content file2) test-content))))
+(nfile-test "Read non-existing file"
+  (let ((file (make-instance 'nfiles:file :path "bar")))
+    (is (nfiles:content file)
+        nil)))
+
+(nfile-test "Cache"
+  (let ((file1 (make-instance 'nfiles:file :path "baz"))
+        (file2 (make-instance 'nfiles:file :path "baz"))
+        (test-content "Cache test"))
+    (setf (nfiles:content file1) test-content)
+    (is (nfiles:content file2) test-content)))
 
 (defclass* slow-file (nfiles:file)
     ((write-count
@@ -61,19 +61,24 @@
 
 (defmethod nfiles:serialize ((profile nfiles:profile) (file slow-file))
   (incf (write-count file))
-  (sleep 2)
   (call-next-method))
 
-(subtest "Skip useless writes"
-  (uiop:with-current-directory (*test-dir*)
-    (clrhash nfiles::*cache*)
-    (let ((file (make-instance 'slow-file :path "qux"))
-          (test-content "Skip test"))
-      (dotimes (i 10)
-        (setf (nfiles:content file) (format nil "~a: ~a" test-content i)))
-      (sleep 3)
-      ;; TODO:
-      (is (write-count file) 1))))
+(nfile-test "Skip useless writes"
+  (let ((file (make-instance 'slow-file :path "qux"))
+        (test-content "Skip test")
+        (limit 5))
+    (setf (nfiles:content file) test-content)
+    ;; Wait for worker to be done writing the first file.
+    (loop until (uiop:file-exists-p (nfiles:expand file))
+          do (sleep 0.1))
+    (dotimes (i limit)
+      (setf (nfiles:content file) (format nil "~a: ~a" test-content i)) )
+    ;; Wait for worker's notification (potentially as long as 1 timeout) + final
+    ;; timeout.
+    (sleep (+ 1 (* 2 (nfiles:timeout file))))
+    (is (nfiles::worker (nfiles::cache-entry file)) nil)
+    (is (write-count file) 2)
+    (is (nfiles:content file) (format nil "~a: ~a" test-content (1- limit)))))
 
 ;; (subtest "Custom path expansion"
 ;;   (uiop:with-current-directory (*test-dir*)
