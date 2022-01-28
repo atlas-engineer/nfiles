@@ -10,8 +10,6 @@
 
 (plan nil)
 
-;; TODO: Clean up test folder on exit.
-
 (defvar *test-dir* (uiop:ensure-pathname
                     (uiop:merge-pathnames* "nfiles/" (uiop:temporary-directory))))
 
@@ -50,6 +48,14 @@
         (test-content "Cache test"))
     (setf (nfiles:content file1) test-content)
     (is (nfiles:content file2) test-content)))
+
+(nfile-test "Backup"
+  (let ((corrupted-path "corrupt.lisp"))
+    (alexandria:write-string-into-file "(" corrupted-path)
+    (let ((corrupted-file (make-instance 'nfiles:lisp-file :path "corrupt")))
+      (is (nfiles:content corrupted-file) nil)
+      (ok (find-if (lambda (filename) (search "-backup" filename))
+                   (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
 (defclass* slow-file (nfiles:file)
     ((write-count

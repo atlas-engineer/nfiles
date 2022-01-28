@@ -73,6 +73,7 @@ If NIL, then attempting to write to the file raises an error.")
 
 (defclass* lisp-file (file)
     ()
+    (:export-class-name-p t)
     (:documentation "Like regular `file' but assume a `.lisp' extension, even if
 not provided."))
 
@@ -133,14 +134,15 @@ removed.")
                                    :if-exists :supersede))))
 
 (defun backup (path)
-  (let ((temp-path
-          (uiop:with-temporary-file (:prefix (uiop:strcat (pathname-name path) "-backup-")
-                                     :suffix ""
-                                     :type (pathname-type path)
-                                     :directory (pathname-directory path)
-                                     :keep t
-                                     :pathname temp-path)
-            temp-path)))
+  (let* ((path (uiop:ensure-pathname path :truename t))
+         (temp-path
+           (uiop:with-temporary-file (:prefix (uiop:strcat (pathname-name path) "-backup-")
+                                      :suffix ""
+                                      :type (pathname-type path)
+                                      :directory (uiop:pathname-directory-pathname path)
+                                      :keep t
+                                      :pathname temp-path)
+             temp-path)))
     (uiop:rename-file-overwriting-target path temp-path)))
 
 (defmethod read-file ((profile profile) (file file))
@@ -151,7 +153,8 @@ removed.")
                        (alexandria:read-file-into-string path))
         (t ()
           ;; TODO: Add (optional) restart?
-          (backup path))))))
+          (backup path)
+          nil)))))
 
 (export-always 'expand)
 (-> expand (file) (values pathname &optional))
