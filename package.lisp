@@ -5,7 +5,6 @@
 
 (uiop:define-package nfiles
   (:use #:common-lisp)
-  ;; (:import-from #:trivia #:match #:multiple-value-match #:lambda-match #:guard)
   (:import-from #:hu.dwim.defclass-star
                 #:defclass*)
   (:import-from #:serapeum

@@ -105,39 +105,53 @@ removed.")
 
 ;; TODO: Does it make sense to serialize / deserialize over a profile?
 ;; Yes, because this is where we chose to not touch the filesystem, or to be read-only.
+;; Now that we have `read' and `write', maybe not so much.
+;; But who knows... Plus for consistency with other methods, we can keep the same parameters.
 
 (export-always 'deserialize)
-(defmethod deserialize ((profile profile) (file file))
-  ;; TODO: Handle .gpg files.
-  ;; TODO: Manage backups on error.
-  ;; TODO: Handle OS locks.
-  (when (uiop:file-exists-p (expand file)) ; TODO: We are checking twice.  Unnecessary?
-    (alexandria:read-file-into-string (expand file))))
+(defmethod deserialize ((profile profile) (file file) content)
+  content)
 
-(defmethod deserialize ((profile profile) (file lisp-file))
+(defmethod deserialize ((profile profile) (file lisp-file) content)
   (read-from-string (call-next-method)))
 
-;; TODO: Make sure serialization methods can be compounded.
+;; TODO: Can serialization methods be compounded?
 (export-always 'serialize)
 (defmethod serialize ((profile profile) (file file))
-  ;; TODO: File creation / existence check.
-  ;; TODO: Handle .gpg files.
-  ;; TODO: Backup management.
-  ;; TODO: Handle OS locks.
-  (alexandria:write-string-into-file
-   (content file)
-   (expand file)
-   :if-does-not-exist :create
-   :if-exists :supersede))
+  (princ-to-string (content file)))
 
 (defmethod serialize ((profile profile) (file lisp-file))
-  (alexandria:write-string-into-file
-   (write-to-string
-    (content file))
-   (expand file)
-   :if-does-not-exist :create
-   :if-exists :supersede))
+  (write-to-string (content file)))
 
+;; TODO: Add support for streams.
+(defmethod write-file ((profile profile) (file file))
+  ;; TODO: Handle .gpg files.
+  (let ((destination (expand file)))
+    ;; TODO: Preserve permissions.
+    (uiop:with-staging-pathname (destination)
+      (alex:write-string-into-file (serialize profile file) destination
+                                   :if-exists :supersede))))
+
+(defun backup (path)
+  (let ((temp-path
+          (uiop:with-temporary-file (:prefix (uiop:strcat (pathname-name path) "-backup-")
+                                     :suffix ""
+                                     :type (pathname-type path)
+                                     :directory (pathname-directory path)
+                                     :keep t
+                                     :pathname temp-path)
+            temp-path)))
+    (uiop:rename-file-overwriting-target path temp-path)))
+
+(defmethod read-file ((profile profile) (file file))
+  (let ((path (expand file)))
+    (when (uiop:file-exists-p path)
+      (handler-case
+          (deserialize profile file
+                       (alexandria:read-file-into-string path))
+        (t ()
+          ;; TODO: Add (optional) restart?
+          (backup path))))))
 
 (export-always 'expand)
 (-> expand (file) (values pathname &optional))
@@ -174,7 +188,7 @@ entry's `cached-value'. ")
 (defmethod initialize-instance :after ((entry cache-entry) &key)
   (setf (cached-value entry)
         (when (uiop:file-exists-p (expand (source-file entry)))
-          (deserialize (profile (source-file entry)) (source-file entry)))))
+          (read-file (profile (source-file entry)) (source-file entry)))))
 
 (defvar *cache* (sera:dict)
   "Internal `*cache*' associating expanded paths with a dedicated `cache-entry'.")
@@ -212,7 +226,7 @@ Return the number of decrements, or NIL if there was none."
                (let ((write-signaled? (drain-semaphore (worker-notifier cache-entry) (timeout file))))
                  (if write-signaled?
                      (progn
-                       (serialize (profile file) file)
+                       (write-file (profile file) file)
                        (maybe-write))
                      (sera:synchronized (cache-entry)
                        (setf
