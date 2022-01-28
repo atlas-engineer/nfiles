@@ -67,7 +67,7 @@ If NIL, then attempting to write to the file raises an error."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
-  (:documentation "TODO: complete me!"))
+  (:documentation "The main object to manipulate and subclass."))
 
 (defclass* lisp-file (file)
   ()
