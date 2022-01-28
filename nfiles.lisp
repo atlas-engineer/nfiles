@@ -3,7 +3,7 @@
 
 (in-package :nfiles)
 
-;; TODO: Test on file-less content.
+;; TODO: Handle write errors (e.g. when trying to write to /root).
 
 (defclass* profile ()
   ((name "default"
@@ -25,6 +25,16 @@ removed.")
 
 (defmethod initialize-instance :after ((profile profile) &key)
   (setf (gethash profile *profile-index*) profile))
+
+(defclass* read-only-profile (profile)
+  ()
+  (:export-class-name-p t)
+  (:documentation "In this profile, files by default don't get written to."))
+
+(defclass* virtual-profile (read-only-profile)
+    ()
+    (:export-class-name-p t)
+    (:documentation "In this profile, files are neither read nor written to by default."))
 
 (defmethod find-profile ((name string))
   (loop for profile being the hash-key of *profile-index*
@@ -86,6 +96,24 @@ not provided."))
   (:export-class-name-p t)
   (:documentation "Like regular `file' but set directory to `uiop:xdg-config-home'."))
 
+(defclass* read-only-file (file)
+    ()
+    (:export-class-name-p t)
+    (:documentation "File that's not written to on change.
+Note that the file's `content' can still be modified in-memory."))
+
+(defclass* virtual-file (read-only-file)
+    ()
+    (:export-class-name-p t)
+    (:documentation "File that's not read nor written to.  It's meant to handle data
+in-memory.
+
+Note that if multiple `virtual-file' expand to the same path, they share the
+same content.
+
+To disable content-sharing for specific `file', have their `resolve' method
+return `uiop:*nil-pathname*'."))
+
 (defvar *index* (tg:make-weak-hash-table :weakness :key :test 'equal)
   "Set of all `file's objects.
 It's a weak hash table to that garbage-collected files are automatically
@@ -126,6 +154,9 @@ See `expand' for a convenience wrapper."))
 ;; Now that we have `read' and `write', maybe not so much.
 ;; But who knows... Plus for consistency with other methods, we can keep the same parameters.
 
+(defun nil-pathname-p (pathname)
+  (uiop:pathname-equal pathname (uiop:nil-pathname)))
+
 (export-always 'deserialize)
 (defgeneric deserialize (profile file raw-content)
   (:method ((profile profile) (file file) raw-content)
@@ -134,8 +165,19 @@ See `expand' for a convenience wrapper."))
   manipulated on the Lisp side.
 See `serialize' for the reverse action."))
 
+(defmethod deserialize :around ((profile profile) (file file) content)
+  "Don't try deserialize if there is no file."
+  (unless (nil-pathname-p (expand file))
+    (call-next-method)))
+
 (defmethod deserialize ((profile profile) (file lisp-file) content)
   (read-from-string (call-next-method)))
+
+(defmethod deserialize ((profile profile) (file virtual-file) content)
+  nil)
+
+(defmethod deserialize ((profile virtual-profile) (file file) content)
+  nil)
 
 ;; TODO: Can serialization methods be compounded?
 (export-always 'serialize)
@@ -147,14 +189,28 @@ to a file.
 
 See `deserialize' for the reverse action."))
 
+(defmethod serialize :around ((profile profile) (file file))
+  (unless (nil-pathname-p (expand file))
+    (call-next-method)))
+
 (defmethod serialize ((profile profile) (file lisp-file))
   (write-to-string (content file)))
+
+(defmethod serialize ((profile profile) (file read-only-file))
+  nil)
+
+(defmethod serialize ((profile read-only-profile) (file file))
+  nil)
 
 ;; TODO: Add support for streams.
 (export-always 'write-file)
 (defgeneric write-file (profile file)
   (:documentation "Persist FILE to disk.
 See `read-file' for the reverse action."))
+
+(defmethod write-file :around ((profile profile) (file file))
+  (unless (nil-pathname-p (expand file))
+    (call-next-method)))
 
 (defmethod write-file ((profile profile) (file file))
   "Write the result of `serialize' to the `file' path."
@@ -164,6 +220,14 @@ See `read-file' for the reverse action."))
     (uiop:with-staging-pathname (destination)
       (alex:write-string-into-file (serialize profile file) destination
                                    :if-exists :supersede))))
+
+(defmethod write-file ((profile profile) (file read-only-file))
+  "Don't write anything for `read-only-file'."
+  nil)
+
+(defmethod write-file ((profile read-only-profile) (file file))
+  "Don't write anything when using the `read-only-profile'."
+  nil)
 
 (defun backup (path)
   (let* ((path (uiop:ensure-pathname path :truename t))
@@ -182,6 +246,11 @@ See `read-file' for the reverse action."))
   (:documentation "Load FILE from disk.
 See `write-file' for the reverse action."))
 
+(defmethod read-file :around ((profile profile) (file file))
+  "Don't try to load the file if its expanded path is nil."
+  (unless (nil-pathname-p (expand file))
+    (call-next-method)))
+
 (defmethod read-file ((profile profile) (file file))
   "Load FILE then return the result of the call to `deserialize' on it.
 On failure, create a backup of the file."
@@ -194,6 +263,14 @@ On failure, create a backup of the file."
           ;; TODO: Add (optional) restart?
           (backup path)
           nil)))))
+
+(defmethod read-file ((profile profile) (file virtual-file))
+  "Don't load anything for virtual files."
+  nil)
+
+(defmethod read-file ((profile virtual-profile) (file file))
+  "Don't load anything when using the `virtual-profile'."
+  nil)
 
 (export-always 'expand)
 (-> expand (file) (values pathname &optional))
@@ -237,9 +314,13 @@ entry's `cached-value'. ")
   "Internal `*cache*' associating expanded paths with a dedicated `cache-entry'.")
 
 (defun cache-entry (file)
-  ;; TODO: To support path-less content, maybe do (or (expand file) file)?
+  "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
-    (alexandria:ensure-gethash (expand file) *cache*
+    (alexandria:ensure-gethash (let ((path (expand file)))
+                                 (if (nil-pathname-p path)
+                                     path
+                                     file))
+                               *cache*
                                (make-instance 'cache-entry :source-file file))))
 
 (export-always 'content)
