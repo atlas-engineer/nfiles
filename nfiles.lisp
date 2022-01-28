@@ -41,7 +41,7 @@ removed.")
       #p""
       :type pathname
       :export nil
-      :initarg :path
+      :initarg nil
       :documentation "")
      (profile
       *default-profile*
@@ -60,12 +60,11 @@ The profile is only set at instantiation time.")
       0.1
       :type real
       :documentation "Time in seconds to wait for other write requests.")
-     (writable
+     (writable                          ; TODO: Remove?
       t
       :type boolean
       :documentation "If T, the file is writable.
-If NIL, then attempting to write to the file raises an error.")
-     )
+If NIL, then attempting to write to the file raises an error."))
     (:export-class-name-p t)
     (:export-accessor-names-p t)
     (:accessor-name-transformer (class*:make-name-transformer name))
@@ -82,11 +81,8 @@ not provided."))
 It's a weak hash table to that garbage-collected files are automatically
 removed.")
 
-(defmethod initialize-instance :after ((file file) &key)
-  ;; TODO: Call uiop:ensure-pathname in `resolve' instead, `path' should be kept as is.
-  ;; TODO: Make sure native pathnames like "[" are not problematic.
-  (setf (path file) (uiop:ensure-pathname (path file)
-                                          :truenamize t))
+(defmethod initialize-instance :after ((file file) &key (path (error "Path required.")))
+  (setf (path file) (uiop:ensure-pathname path))
   (setf (gethash file *index*) file))
 
 ;; TODO: Useless?
@@ -94,6 +90,12 @@ removed.")
 ;;   (loop for profile being the hash-key of *profile-index*
 ;;         when (string= name (name profile))
 ;;           return profile))
+
+(defmethod resolve :around ((profile profile) (file file))
+  "Default path resolution."
+  ;; TODO: Make sure native pathnames like "[" are not problematic.
+  (uiop:ensure-pathname (call-next-method)
+                        :truenamize t))
 
 (defmethod resolve ((profile profile) (file file))
   "Default path resolution."
@@ -247,6 +249,7 @@ Return the number of decrements, or NIL if there was none."
       (unless (worker entry)
         (setf (worker entry)
               (bt:make-thread (make-worker file entry)
+                              :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
                               :name "NFiles worker"))))))
 
 (defmacro with-file-content ((content file) &body body)

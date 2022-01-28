@@ -27,6 +27,12 @@
         (uiop:merge-pathnames* "foo" *test-dir*)
         :test 'uiop:pathname-equal)))
 
+(nfile-test "Current dir change"
+  (let* ((file (make-instance 'nfiles:file :path "foo" ))
+         (old-path (nfiles:expand file)))
+    (uiop:with-current-directory ((uiop:temporary-directory))
+      (isnt (nfiles:expand file) old-path))))
+
 (nfile-test "Simple write"
   (let ((file (make-instance 'nfiles:file :path "foo"))
         (test-content "Hello world!"))
