@@ -8,7 +8,6 @@
   :license "BSD 3-Clause"
   :in-order-to ((test-op (test-op "nfiles/tests")))
   :depends-on (alexandria
-               calispel
                hu.dwim.defclass-star
                serapeum
                trivial-garbage)

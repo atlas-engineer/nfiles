@@ -82,7 +82,9 @@ It's a weak hash table to that garbage-collected files are automatically
 removed.")
 
 (defmethod initialize-instance :after ((file file) &key)
-  (setf (path file) (uiop:ensure-pathname (path file)  ; TODO: Test that this disambiguate anything.
+  ;; TODO: Call uiop:ensure-pathname in `resolve' instead, `path' should be kept as is.
+  ;; TODO: Make sure native pathnames like "[" are not problematic.
+  (setf (path file) (uiop:ensure-pathname (path file)
                                           :truenamize t))
   (setf (gethash file *index*) file))
 
@@ -164,8 +166,9 @@ entry's `cached-value'. ")
      (worker
       nil
       :type (or null bt:thread))
-     (worker-channel
-      :type (or null calispel:channel)))
+     (worker-notifier
+      nil
+      :type (or null bt:semaphore)))
     (:accessor-name-transformer (class*:make-name-transformer name)))
 
 (defmethod initialize-instance :after ((entry cache-entry) &key)
@@ -189,59 +192,45 @@ entry's `cached-value'. ")
     (sera:synchronized (entry)
       (cached-value entry))))
 
-(defun make-channel (&optional size)
-  "Return a channel of capacity SIZE.
-If SIZE is NIL, capicity is infinite."
-  (cond
-    ((null size)
-     (make-instance 'calispel:channel
-                    :buffer (make-instance 'jpl-queues:unbounded-fifo-queue)))
-    ((zerop size)
-     (make-instance 'calispel:channel))
-    ((plusp size)
-     (make-instance 'calispel:channel
-                    :buffer (make-instance 'jpl-queues:bounded-fifo-queue :capacity size)))))
-
-(defun drain-channel (channel &optional timeout)
-  "Listen to CHANNEL until a value is available, then return all CHANNEL values
-as a list.
-TIMEOUT specifies how long to wait for a value after the first one.
-This is a blocking operation."
-  (labels ((fetch ()
-             (multiple-value-bind (value received?)
-                 (calispel:? channel timeout)
-               (if received?
-                   (cons value (fetch))
-                   nil))))
-    (nreverse (fetch))))
+(defun drain-semaphore (semaphore &optional timeout)
+  "Decrement the semaphore counter down to 0.
+Return the number of decrements, or NIL if there was none."
+  (let ((decrement-count nil))
+    (labels ((drain ()
+               (let ((result (bt:wait-on-semaphore semaphore :timeout timeout)))
+                 (when result
+                   (unless decrement-count
+                     (setf decrement-count 0))
+                   (incf decrement-count)
+                   (drain)))))
+      (drain))
+    decrement-count))
 
 (defun make-worker (file cache-entry)
   (lambda ()
-    (sera:nlet lp ((value (drain-channel (worker-channel cache-entry) (timeout file))))
-      (if value
-          (progn
-            (serialize (profile file) file)
-            (lp (drain-channel (worker-channel cache-entry) (timeout file)))))
-      (sera:synchronized (cache-entry)
-        (setf
-         (worker-channel cache-entry) nil
-         (worker cache-entry) nil)))))
-
-;; TODO: Replace channel with semaphore?
+    (labels ((maybe-write ()
+               (let ((write-signaled? (drain-semaphore (worker-notifier cache-entry) (timeout file))))
+                 (if write-signaled?
+                     (progn
+                       (serialize (profile file) file)
+                       (maybe-write))
+                     (sera:synchronized (cache-entry)
+                       (setf
+                        (worker-notifier cache-entry) nil
+                        (worker cache-entry) nil))))))
+      (maybe-write))))
 
 (defmethod (setf content) (value (file file))
   (let ((entry (cache-entry file)))
     (sera:synchronized (entry)
+      (setf (cached-value entry) value)
+      (unless (worker-notifier entry)
+        (setf (worker-notifier entry) (bt:make-semaphore :name "NFiles notifier")))
+      (bt:signal-semaphore (worker-notifier entry))
       (unless (worker entry)
-        (setf (worker-channel entry) (make-channel))
         (setf (worker entry)
               (bt:make-thread (make-worker file entry)
-                              :name "NFiles worker")))
-      (setf (cached-value entry) value)
-      ;; Signal the worker with an arbitrary value:
-      (calispel:! (worker-channel entry) t))))
-
-
+                              :name "NFiles worker"))))))
 
 (defmacro with-file-content ((content file) &body body)
   "Bind CONTENT to FILE's content in BODY.
