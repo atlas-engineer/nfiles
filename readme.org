@@ -43,8 +43,16 @@ hard-coded within the image, which makes it unfit for delivery.  Consider this:
 #+end_src
 
 Now if I ship this image to my friend Kaboom, =*foo-path*= will expand to
-~#P"/home/ambrevar/.config/"~ on their machine instead of the expected
-=#P"/home/kaboom/.config/"=.
+
+#+begin_quote
+#P"/home/ambrevar/.config/
+#+end_quote
+
+on their machine instead of the expected
+
+#+begin_quote
+#P"/home/kaboom/.config/"
+#+end_quote
 
 ** Examples
 
