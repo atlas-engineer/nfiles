@@ -22,9 +22,15 @@
        (uiop:delete-directory-tree *test-dir* :validate t))))
 
 (nfile-test "Simple path check"
-  (let ((file (make-instance 'nfiles:file :base-path "foo" )))
+  (let ((file (make-instance 'nfiles:file :base-path "foo")))
     (is (nfiles:expand file)
         (uiop:merge-pathnames* "foo" *test-dir*)
+        :test 'uiop:pathname-equal)))
+
+(nfile-test "Special character support"
+  (let ((file (make-instance 'nfiles:file :base-path "[")))
+    (is (nfiles:expand file)
+        (uiop:merge-pathnames* #p"\\[" *test-dir*)
         :test 'uiop:pathname-equal)))
 
 (nfile-test "Current dir change"

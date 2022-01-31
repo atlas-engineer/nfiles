@@ -189,7 +189,6 @@ See `expand' for a convenience wrapper."))
 
 (defmethod resolve :around ((profile profile) (file file))
   "Clean up the result before returning it."
-  ;; TODO: Make sure native pathnames like "[" are not problematic.
   (uiop:ensure-pathname (call-next-method)
                         :truenamize t))
 
