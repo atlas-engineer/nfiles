@@ -14,6 +14,7 @@
   :components
   ((:file "package")
    (:file "pathname-helpers")
+   (:file "gpg")
    (:file "nfiles")))
 
 (defsystem "nfiles/tests"

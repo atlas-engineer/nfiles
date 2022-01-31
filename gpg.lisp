@@ -1,6 +1,10 @@
 ;;;; SPDX-FileCopyrightText: Atlas Engineer LLC
 ;;;; SPDX-License-Identifier: BSD-3-Clause
 
+(in-package :nfiles)
+
+(defvar *gpg-program* "gpg")
+
 (defvar *gpg-default-recipient* nil)
 
 (defstruct gpg-uid
@@ -25,9 +29,9 @@
                                          (uiop:run-program (list *gpg-program* "--list-secret-keys" "--with-colons")
                                                            :output s)))
                           :test #'string=))
-         (entries (mapcar (lambda (s) (str:concat "sec" s)) entries))
-         (entries (mapcar (lambda (s) (str:split +newline+ s :omit-nulls t)) entries))
-         (entries (mapcar (lambda (entry) (mapcar (lambda (s) (str:split ":" s)) entry)) entries)))
+         (entries (mapcar (lambda (s) (uiop:strcat "sec" s)) entries))
+         (entries (mapcar (lambda (s) (delete-if #'uiop:emptyp (sera:lines s))) entries))
+         (entries (mapcar (lambda (entry) (mapcar (lambda (s) (sera:split-sequence #\: s)) entry)) entries)))
     (mapcar (lambda (entry)
               (let ((key (first entry))
                     (uids (remove-if (lambda (e) (not (string= "uid" (first e)))) entry)))
@@ -56,32 +60,21 @@ As third value the name."
             (let* ((output (sera:lines (with-output-to-string (s)
                                          (uiop:run-program (list *gpg-program* "--decrypt" file)
                                                            :output nil :error-output s))))
-                   (first-line-tokens (str:split " " (first output)))
+                   (first-line-tokens (sera:tokens (first output)))
                    (key (let ((key-string (second (member "ID" first-line-tokens :test #'string=))))
-                          (if (str:ends-with? "," key-string)
+                          (if (sera:string-suffix-p "," key-string)
                               (sera:slice key-string 0 -1)
                               key-string)))
-                   (second-line (str:trim (second output)))
+                   (second-line (sera:trim-whitespace (second output)))
                    (mail-start (position #\space second-line :from-end t))
-                   (mail (str:trim (reduce (lambda (target rep) (str:replace-all rep "" target))
-                                           '(">" "<" "\"") :initial-value (subseq second-line mail-start))))
-                   (name (str:replace-all "\"" "" (subseq second-line 0 mail-start))))
+                   (mail (sera:trim-whitespace
+                          (reduce (lambda (target rep) (sera:string-replace-all rep target ""))
+                                  '(">" "<" "\"") :initial-value (subseq second-line mail-start))))
+                   (name (sera:string-replace-all "\"" (subseq second-line 0 mail-start) "")))
               (values key mail name))
           (error ()
             *gpg-default-recipient*))
         *gpg-default-recipient*)))
-
-(defun gpg-write (stream gpg-file &optional recipient)
-  "Write STREAM to GPG-FILE using RECIPIENT key.
-If RECIPIENT is not provided, use default key."
-  (let ((native-file (uiop:native-namestring gpg-file)))
-    (uiop:run-program
-     `(,*gpg-program* "--output" ,native-file
-                      ,@(if recipient
-                            `("--recipient" ,recipient)
-                            '("--default-recipient-self"))
-                      "--batch" "--yes" "--encrypt")
-     :input stream)))
 
 (defun gpg-write (stream gpg-file &optional recipient)
   "Write STREAM to GPG-FILE using RECIPIENT key.
@@ -100,12 +93,12 @@ If RECIPIENT is not provided, use default key."
 OPTIONS are as for `open''s `:direction'.
 Other options are not supported.  File is overwritten if it exists, while
 nothing is done if file is missing."
-  ;; TODO: Support all of `open' options.
+  ;; TODO: Support all `open' options.
   (if (member (getf options :direction) '(:io :input nil))
       (when (uiop:file-exists-p gpg-file)
         (let ((clear-data (with-output-to-string (out)
                             (uiop:run-program
-                             (list *gpg-program* "--decrypt" gpg-file)
+                             (list *gpg-program* "--decrypt" (uiop:native-namestring gpg-file))
                              :output out))))
           (with-input-from-string (stream clear-data)
             (prog1                ; TODO: Shouldn't we `unwind-protect' instead?
@@ -115,13 +108,14 @@ nothing is done if file is missing."
                 (gpg-write stream gpg-file (gpg-recipient gpg-file)))))))
       (let ((result nil)
             (recipient (or (gpg-recipient gpg-file)
-                           (and *browser*
-                                (ignore-errors
-                                 (gpg-key-key-id
-                                  (first (prompt
-                                          :prompt "Recipient:"
-                                          :sources '(gpg-key-source)))))))))
+                           *gpg-default-recipient*)))
         (with-input-from-string (in (with-output-to-string (stream)
                                       (setf result (funcall fun stream))))
           (gpg-write in gpg-file recipient))
         result)))
+
+(defmacro with-gpg-file ((var pathname &rest keys) &body body)
+  "Trivial wrapper around `call-with-gpg-file'."
+  `(call-with-gpg-file ,pathname
+                       ,keys
+                       (lambda (,var) ,@body)))

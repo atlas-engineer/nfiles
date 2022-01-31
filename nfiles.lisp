@@ -48,7 +48,7 @@ removed.")
 (defvar *default-profile* (make-instance 'profile))
 
 (defclass* file ()
-  ((path
+  ((path                                ; TODO: Rename to `base-path'?
     #p""
     :type pathname
     :export nil
@@ -95,6 +95,13 @@ not provided."))
   ()
   (:export-class-name-p t)
   (:documentation "Like regular `file' but set directory to `uiop:xdg-config-home'."))
+
+(defclass* gpg-file (file)
+    ()
+    (:export-class-name-p t)
+    (:documentation "The file is automatically crypted and decrypted using the
+specified recipient key.
+The '.gpg' extension is automatically added if missing."))
 
 (defclass* read-only-file (file)
     ()
@@ -145,6 +152,15 @@ See `expand' for a convenience wrapper."))
 
 (defmethod resolve ((profile profile) (file lisp-file))
   (make-pathname :defaults (call-next-method) :type "lisp"))
+
+(defmethod resolve ((profile profile) (file gpg-file))
+  (let ((path (call-next-method)))
+    (if (string-equal (pathname-type* path) "gpg")
+        file
+        (make-pathname :defaults path :type "gpg"
+                       :name (alex:if-let ((ext (pathname-type* path)))
+                               (uiop:strcat (pathname-name path) "." ext)
+                               (pathname-name path))))))
 
 (defmethod resolve ((profile profile) (file config-file))
   (uiop:xdg-config-home (call-next-method)))
@@ -218,6 +234,18 @@ See `read-file' for the reverse action."))
       (alex:write-string-into-file (serialize profile file) destination
                                    :if-exists :supersede))))
 
+(defmethod write-file ((profile profile) (file gpg-file))
+  "Crypt to FILE with GPG.
+See `*gpg-default-recipient*'."
+  ;; TODO: Use (with-gpg-file).
+  (call-with-gpg-file
+   (expand file)
+   '(:direction :output)
+   (lambda (stream)
+     (write-string
+      (serialize profile file)
+      stream))))
+
 (defmethod write-file ((profile profile) (file read-only-file))
   "Don't write anything for `read-only-file'."
   nil)
@@ -246,20 +274,30 @@ See `write-file' for the reverse action."))
 (defmethod read-file :around ((profile profile) (file file))
   "Don't try to load the file if its expanded path is nil."
   (unless (nil-pathname-p (expand file))
-    (call-next-method)))
+    (let ((path (expand file)))
+      (when (uiop:file-exists-p path)
+        (handler-case
+            (deserialize profile file
+                         (call-next-method))
+          (t ()
+            ;; TODO: Add (optional) restart?
+            (backup path)
+            nil))))))
 
 (defmethod read-file ((profile profile) (file file))
   "Load FILE then return the result of the call to `deserialize' on it.
 On failure, create a backup of the file."
-  (let ((path (expand file)))
-    (when (uiop:file-exists-p path)
-      (handler-case
-          (deserialize profile file
-                       (alexandria:read-file-into-string path))
-        (t ()
-          ;; TODO: Add (optional) restart?
-          (backup path)
-          nil)))))
+  (alexandria:read-file-into-string (expand file)))
+
+(defmethod read-file ((profile profile) (file gpg-file))
+  "Decrypt FILE with GPG.
+See `*gpg-default-recipient*'."
+  ;; TODO: Use (with-gpg-file).
+  (call-with-gpg-file
+   (expand file)
+   '(:direction :input)
+   (lambda (stream)
+     (alex:read-stream-content-into-string stream))))
 
 (defmethod read-file ((profile profile) (file virtual-file))
   "Don't load anything for virtual files."

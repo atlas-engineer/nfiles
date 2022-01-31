@@ -19,7 +19,7 @@ particular user-centric files like configuration files.
 - Cached reads and writes.
   When a =file= object expands to the same path as another one, a =read= or
   =write= on it won't do anything in case there was no change since last write.
-- On-the-fly PGP encryption.
+- On-the-fly PGP encryption (*experimental!*).
 - Profile support.
 - On read error, existing files are backed up.
 - On write error, no file is written to disk.
@@ -60,6 +60,7 @@ To be continued.
 
 ** Roadmap
 
+- Improve PGP support.
 - Support OS-level locks (à-la Emacs / LibreOffice).
 
 ** History

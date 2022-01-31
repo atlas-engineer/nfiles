@@ -13,6 +13,14 @@
   (the (values boolean &optional)
        (uiop:pathname-equal pathname uiop:*nil-pathname*)))
 
+(export-always 'pathname-type*)
+(defun pathname-type* (pathname)
+  "Like `pathname-type' but return NIL instead of \"\" or :UNSPECIFIC."
+  (let ((type (pathname-type pathname)))
+    (if (member type '(nil "" :unspecific) :test 'equal)
+        nil
+        type)))
+
 (export-always 'parent)
 (-> parent (pathname-designator) (or pathname-designator null))
 (defun parent (path)

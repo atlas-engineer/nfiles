@@ -117,11 +117,17 @@
     (is (write-count file) 2)
     (is (nfiles:content file) (format nil "~a: ~a" test-content (1- limit)))))
 
-;; (subtest "Custom path expansion"
-;;   (uiop:with-current-directory (*test-dir*)
-;;     (let ((file (make-instance 'nfiles:file :path "foo" )))
-;;       (is (nfiles:expand file)
-;;           (uiop:merge-pathnames* "foo" *test-dir*)
-;;           :test 'uiop:pathname-equal))))
+(nfile-test "GPG test"
+  (let ((file (make-instance 'nfiles:gpg-file :path "fog"))
+        (test-content "Cryptic world")
+        (nfiles::*gpg-default-recipient* "mail@ambrevar.xyz"))
+    (setf (nfiles:content file) test-content)
+    (sleep 1)                           ; Wait for write.
+    (ok (uiop:file-exists-p (nfiles:expand file)))
+    (is-error (alexandria:read-file-into-string (nfiles:expand file))
+              'error)
+    (nfiles::clear-cache)
+    (let ((synonym-file (make-instance 'nfiles:gpg-file :path "fog")))
+      (is (nfiles:content synonym-file) test-content))))
 
 (finalize)
