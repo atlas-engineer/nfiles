@@ -371,6 +371,7 @@ Return the number of decrements, or NIL if there was none."
                               :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
                               :name "NFiles worker"))))))
 
+(export-always 'with-file-content)
 (defmacro with-file-content ((content file) &body body)
   "Bind CONTENT to FILE's content in BODY.
 The new value of CONTENT is saved to FILE on exit."
