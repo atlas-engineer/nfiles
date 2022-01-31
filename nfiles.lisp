@@ -464,7 +464,7 @@ Return the number of decrements, or NIL if there was none."
 The new value of CONTENT is saved to FILE on exit."
   `(let ((,content (content ,file)))
      (unwind-protect (progn ,@body)
-       (setf (content file) ,content))))
+       (setf (content ,file) ,content))))
 
 ;; TODO: Useless?
 (defmacro with-existing-content ((content file) &body body) ; TODO: Add default keyword parameter?
