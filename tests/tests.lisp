@@ -15,7 +15,7 @@
 
 (defmacro nfile-test (name &body body)
   `(subtest ,name
-     (clrhash nfiles::*cache*)
+     (nfiles::clear-cache)
      (unwind-protect
           (uiop:with-current-directory ((ensure-directories-exist *test-dir*))
             ,@body)

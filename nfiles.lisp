@@ -286,7 +286,7 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
 
 ;; We also don't want to needlessly duplicate the content in memory.
 
-;; TODO: How do we garbage collect cache entries?
+;; TODO: How do we garbage collect cache entries?  We can call `clear-cache'.
 
 (defclass* cache-entry ()                ; TODO: Rename?
   ((source-file
@@ -312,6 +312,9 @@ entry's `cached-value'. ")
 
 (defvar *cache* (sera:dict)
   "Internal `*cache*' associating expanded paths with a dedicated `cache-entry'.")
+
+(defun clear-cache ()                  ; TODO: Export?
+  (clrhash *cache*))
 
 (defun cache-entry (file)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
