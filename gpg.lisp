@@ -124,8 +124,9 @@ nothing is done if file is missing."
           (gpg-write in gpg-file recipient))
         result)))
 
+(export-always 'with-gpg-file)
 (defmacro with-gpg-file ((var pathname &rest keys) &body body)
   "Trivial wrapper around `call-with-gpg-file'."
   `(call-with-gpg-file ,pathname
-                       ,keys
+                       ',keys
                        (lambda (,var) ,@body)))

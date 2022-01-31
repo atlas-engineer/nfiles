@@ -286,14 +286,10 @@ See `read-file' for the reverse action."))
 (defmethod write-file ((profile profile) (file gpg-file) &key)
   "Crypt to FILE with GPG.
 See `*gpg-default-recipient*'."
-  ;; TODO: Use (with-gpg-file).
-  (nfiles/gpg::call-with-gpg-file
-   (expand file)
-   '(:direction :output)
-   (lambda (stream)
-     (write-string
-      (serialize profile file)
-      stream))))
+  (nfiles/gpg:with-gpg-file (stream (expand file) :direction :output)
+    (write-string
+     (serialize profile file)
+     stream)))
 
 (defmethod write-file ((profile profile) (file read-only-file) &key)
   "Don't write anything for `read-only-file'."
@@ -341,12 +337,8 @@ On failure, create a backup of the file."
 (defmethod read-file ((profile profile) (file gpg-file) &key)
   "Decrypt FILE with GPG.
 See `*gpg-default-recipient*'."
-  ;; TODO: Use (with-gpg-file).
-  (nfiles/gpg::call-with-gpg-file
-   (expand file)
-   '(:direction :input)
-   (lambda (stream)
-     (alex:read-stream-content-into-string stream))))
+  (nfiles/gpg:with-gpg-file (stream (expand file))
+    (alex:read-stream-content-into-string stream)))
 
 (defmethod read-file ((profile profile) (file virtual-file) &key)
   "Don't load anything for virtual files."
