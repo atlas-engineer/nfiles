@@ -96,6 +96,16 @@ not provided."))
   (:export-class-name-p t)
   (:documentation "Like regular `file' but set directory to `uiop:xdg-config-home'."))
 
+(defclass* cache-file (file)
+    ()
+    (:export-class-name-p t)
+    (:documentation "Like regular `file' but set directory to `uiop:xdg-cache-home'"))
+
+(defclass* data-file (file)
+    ()
+    (:export-class-name-p t)
+    (:documentation "Like regular `file' but set directory to `uiop:xdg-data-home'"))
+
 (defclass* gpg-file (file)
     ()
     (:export-class-name-p t)
@@ -164,6 +174,12 @@ See `expand' for a convenience wrapper."))
 
 (defmethod resolve ((profile profile) (file config-file))
   (uiop:xdg-config-home (call-next-method)))
+
+(defmethod resolve ((profile profile) (file cache-file))
+  (uiop:xdg-cache-home (call-next-method)))
+
+(defmethod resolve ((profile profile) (file data-file))
+  (uiop:xdg-data-home (call-next-method)))
 
 ;; TODO: Does it make sense to serialize / deserialize over a profile?
 ;; Yes, because this is where we chose to not touch the filesystem, or to be read-only.
