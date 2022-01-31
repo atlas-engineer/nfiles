@@ -69,7 +69,7 @@ removed.")
 (defvar *default-profile* (make-instance 'profile))
 
 (defclass* file ()
-  ((path                                ; TODO: Rename to `base-path'?
+  ((base-path
     #p""
     :type pathname
     :export t
@@ -169,8 +169,8 @@ removed.")
                *index*)
       result)))
 
-(defmethod initialize-instance :after ((file file) &key (path (error "Path required.")))
-  (setf (slot-value file 'path) (uiop:ensure-pathname path))
+(defmethod initialize-instance :after ((file file) &key (base-path (error "Base path required.")))
+  (setf (slot-value file 'base-path) (uiop:ensure-pathname base-path))
   (setf (gethash file *index*) file))
 
 ;; TODO: Useless?
@@ -182,7 +182,7 @@ removed.")
 (export-always 'resolve)
 (defgeneric resolve (profile file)
   (:method ((profile profile) (file file))
-    (path file))
+    (base-path file))
   (:documentation "Return the final expanded path foe `file' depending on its `profile'.
 This method is meant to be specialized against the user-defined `profile's and `file's.
 See `expand' for a convenience wrapper."))
@@ -276,7 +276,6 @@ See `read-file' for the reverse action."))
 
 (defmethod write-file ((profile profile) (file file) &key)
   "Write the result of `serialize' to the `file' path."
-  ;; TODO: Handle .gpg files.
   (let ((destination (expand file)))
     ;; TODO: Preserve permissions.
     (uiop:with-staging-pathname (destination)

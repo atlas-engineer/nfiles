@@ -22,13 +22,13 @@
        (uiop:delete-directory-tree *test-dir* :validate t))))
 
 (nfile-test "Simple path check"
-  (let ((file (make-instance 'nfiles:file :path "foo" )))
+  (let ((file (make-instance 'nfiles:file :base-path "foo" )))
     (is (nfiles:expand file)
         (uiop:merge-pathnames* "foo" *test-dir*)
         :test 'uiop:pathname-equal)))
 
 (nfile-test "Current dir change"
-  (let* ((file (make-instance 'nfiles:file :path "foo" ))
+  (let* ((file (make-instance 'nfiles:file :base-path "foo" ))
          (old-path (nfiles:expand file)))
     (uiop:with-current-directory ((uiop:temporary-directory))
       (isnt (nfiles:expand file) old-path))))
@@ -44,12 +44,12 @@
     ())
 
 (nfile-test "Application config file"
-  (let ((file (make-instance 'myapp-config-file :path "init")))
+  (let ((file (make-instance 'myapp-config-file :base-path "init")))
     (is (nfiles:expand file)
         (uiop:xdg-config-home "myapp/init.lisp"))))
 
 (nfile-test "Read-only file"
-  (let ((file (make-instance 'nfiles:read-only-file :path "should-not-exist")))
+  (let ((file (make-instance 'nfiles:read-only-file :base-path "should-not-exist")))
     (setf (nfiles:content file) "foo")
     (is (nfiles:expand file)
         (uiop:merge-pathnames* "should-not-exist" *test-dir*)
@@ -59,7 +59,7 @@
         nil)))
 
 (nfile-test "Simple write"
-  (let ((file (make-instance 'nfiles:file :path "foo"))
+  (let ((file (make-instance 'nfiles:file :base-path "foo"))
         (test-content "Hello world!"))
     (setf (nfiles:content file) test-content)
     (sleep 1)                           ; Wait for file write.
@@ -69,13 +69,13 @@
         test-content)))
 
 (nfile-test "Read non-existing file"
-  (let ((file (make-instance 'nfiles:file :path "bar")))
+  (let ((file (make-instance 'nfiles:file :base-path "bar")))
     (is (nfiles:content file)
         nil)))
 
 (nfile-test "Cache"
-  (let ((file1 (make-instance 'nfiles:file :path "baz"))
-        (file2 (make-instance 'nfiles:file :path "baz"))
+  (let ((file1 (make-instance 'nfiles:file :base-path "baz"))
+        (file2 (make-instance 'nfiles:file :base-path "baz"))
         (test-content "Cache test"))
     (setf (nfiles:content file1) test-content)
     (is (nfiles:content file2) test-content)))
@@ -83,7 +83,7 @@
 (nfile-test "Backup"
   (let ((corrupted-path "corrupt.lisp"))
     (alexandria:write-string-into-file "(" corrupted-path)
-    (let ((corrupted-file (make-instance 'nfiles:lisp-file :path "corrupt")))
+    (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path "corrupt")))
       (is (nfiles:content corrupted-file) nil)
       (ok (find-if (lambda (filename) (search "-backup" filename))
                    (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
@@ -101,7 +101,7 @@
   (call-next-method))
 
 (nfile-test "Skip useless writes"
-  (let ((file (make-instance 'slow-file :path "qux"))
+  (let ((file (make-instance 'slow-file :base-path "qux"))
         (test-content "Skip test")
         (limit 5))
     (setf (nfiles:content file) test-content)
@@ -118,7 +118,7 @@
     (is (nfiles:content file) (format nil "~a: ~a" test-content (1- limit)))))
 
 (nfile-test "GPG test"
-  (let ((file (make-instance 'nfiles:gpg-file :path "fog"))
+  (let ((file (make-instance 'nfiles:gpg-file :base-path "fog"))
         (test-content "Cryptic world")
         (nfiles/gpg:*gpg-default-recipient* "mail@ambrevar.xyz"))
     (setf (nfiles:content file) test-content)
@@ -127,7 +127,7 @@
     (is-error (alexandria:read-file-into-string (nfiles:expand file))
               'error)
     (nfiles::clear-cache)
-    (let ((synonym-file (make-instance 'nfiles:gpg-file :path "fog")))
+    (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path "fog")))
       (is (nfiles:content synonym-file) test-content))))
 
 (finalize)
