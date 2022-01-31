@@ -44,6 +44,22 @@ removed.")
 (defmethod find-profile ((p profile))
   (gethash p *profile-index*))
 
+(export-always 'all-profiles)
+(defun all-profiles (&rest packages)
+  (flet ((ensure-package (designator)   ; TODO: Factor this.
+           (if (packagep designator)
+               designator
+               (find-package designator))))
+    (let ((result '())
+          (packages (mapcar #'ensure-package packages)))
+      (maphash (lambda (file value)
+                 (declare (ignore value))
+                 (when (or (not packages)
+                           (find (sera:class-name-of file) packages))
+                   (push file result)))
+               *profile-index*)
+      result)))
+
 (export-always '*default-profile*)
 (defvar *default-profile* (make-instance 'profile))
 
@@ -135,6 +151,22 @@ return `uiop:*nil-pathname*'."))
   "Set of all `file's objects.
 It's a weak hash table to that garbage-collected files are automatically
 removed.")
+
+(export-always 'all-files)
+(defun all-files (&rest packages)
+  (flet ((ensure-package (designator)
+           (if (packagep designator)
+               designator
+               (find-package designator))))
+    (let ((result '())
+          (packages (mapcar #'ensure-package packages)))
+      (maphash (lambda (file value)
+                 (declare (ignore value))
+                 (when (or (not packages)
+                           (find (sera:class-name-of file) packages))
+                   (push file result)))
+               *index*)
+      result)))
 
 (defmethod initialize-instance :after ((file file) &key (path (error "Path required.")))
   (setf (path file) (uiop:ensure-pathname path))
