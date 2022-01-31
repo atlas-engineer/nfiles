@@ -318,8 +318,8 @@ entry's `cached-value'. ")
   (sera:synchronized (*cache*)
     (alexandria:ensure-gethash (let ((path (expand file)))
                                  (if (nil-pathname-p path)
-                                     path
-                                     file))
+                                     file
+                                     path))
                                *cache*
                                (make-instance 'cache-entry :source-file file))))
 
