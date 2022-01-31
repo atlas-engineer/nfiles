@@ -225,61 +225,61 @@ See `expand' for a convenience wrapper."))
 ;; But who knows... Plus for consistency with other methods, we can keep the same parameters.
 
 (export-always 'deserialize)
-(defgeneric deserialize (profile file raw-content)
-  (:method ((profile profile) (file file) raw-content)
+(defgeneric deserialize (profile file raw-content &key &allow-other-keys)
+  (:method ((profile profile) (file file) raw-content &key)
     raw-content)
   (:documentation "Transform raw-content into a useful form ready to be
   manipulated on the Lisp side.
 See `serialize' for the reverse action."))
 
-(defmethod deserialize :around ((profile profile) (file file) content)
+(defmethod deserialize :around ((profile profile) (file file) content &key)
   "Don't try deserialize if there is no file."
   (unless (nil-pathname-p (expand file))
     (call-next-method)))
 
-(defmethod deserialize ((profile profile) (file lisp-file) content)
+(defmethod deserialize ((profile profile) (file lisp-file) content &key)
   (read-from-string (call-next-method)))
 
-(defmethod deserialize ((profile profile) (file virtual-file) content)
+(defmethod deserialize ((profile profile) (file virtual-file) content &key)
   nil)
 
-(defmethod deserialize ((profile virtual-profile) (file file) content)
+(defmethod deserialize ((profile virtual-profile) (file file) content &key)
   nil)
 
 ;; TODO: Can serialization methods be compounded?
 (export-always 'serialize)
-(defgeneric serialize (profile file)
-  (:method ((profile profile) (file file))
+(defgeneric serialize (profile file &key &allow-other-keys)
+  (:method ((profile profile) (file file) &key)
       (princ-to-string (content file)))
   (:documentation "Transform `file' content into a string meant to be persisted
 to a file.
 
 See `deserialize' for the reverse action."))
 
-(defmethod serialize :around ((profile profile) (file file))
+(defmethod serialize :around ((profile profile) (file file) &key)
   (unless (nil-pathname-p (expand file))
     (call-next-method)))
 
-(defmethod serialize ((profile profile) (file lisp-file))
+(defmethod serialize ((profile profile) (file lisp-file) &key)
   (write-to-string (content file)))
 
-(defmethod serialize ((profile profile) (file read-only-file))
+(defmethod serialize ((profile profile) (file read-only-file) &key)
   nil)
 
-(defmethod serialize ((profile read-only-profile) (file file))
+(defmethod serialize ((profile read-only-profile) (file file) &key)
   nil)
 
 ;; TODO: Add support for streams.
 (export-always 'write-file)
-(defgeneric write-file (profile file)
+(defgeneric write-file (profile file &key &allow-other-keys)
   (:documentation "Persist FILE to disk.
 See `read-file' for the reverse action."))
 
-(defmethod write-file :around ((profile profile) (file file))
+(defmethod write-file :around ((profile profile) (file file) &key)
   (unless (nil-pathname-p (expand file))
     (call-next-method)))
 
-(defmethod write-file ((profile profile) (file file))
+(defmethod write-file ((profile profile) (file file) &key)
   "Write the result of `serialize' to the `file' path."
   ;; TODO: Handle .gpg files.
   (let ((destination (expand file)))
@@ -288,7 +288,7 @@ See `read-file' for the reverse action."))
       (alex:write-string-into-file (serialize profile file) destination
                                    :if-exists :supersede))))
 
-(defmethod write-file ((profile profile) (file gpg-file))
+(defmethod write-file ((profile profile) (file gpg-file) &key)
   "Crypt to FILE with GPG.
 See `*gpg-default-recipient*'."
   ;; TODO: Use (with-gpg-file).
@@ -300,11 +300,11 @@ See `*gpg-default-recipient*'."
       (serialize profile file)
       stream))))
 
-(defmethod write-file ((profile profile) (file read-only-file))
+(defmethod write-file ((profile profile) (file read-only-file) &key)
   "Don't write anything for `read-only-file'."
   nil)
 
-(defmethod write-file ((profile read-only-profile) (file file))
+(defmethod write-file ((profile read-only-profile) (file file) &key)
   "Don't write anything when using the `read-only-profile'."
   nil)
 
@@ -321,11 +321,11 @@ See `*gpg-default-recipient*'."
     (uiop:rename-file-overwriting-target path temp-path)))
 
 (export-always 'read-file)
-(defgeneric read-file (profile file)
+(defgeneric read-file (profile file &key &allow-other-keys)
   (:documentation "Load FILE from disk.
 See `write-file' for the reverse action."))
 
-(defmethod read-file :around ((profile profile) (file file))
+(defmethod read-file :around ((profile profile) (file file) &key)
   "Don't try to load the file if its expanded path is nil."
   (unless (nil-pathname-p (expand file))
     (let ((path (expand file)))
@@ -338,12 +338,12 @@ See `write-file' for the reverse action."))
             (backup path)
             nil))))))
 
-(defmethod read-file ((profile profile) (file file))
+(defmethod read-file ((profile profile) (file file) &key)
   "Load FILE then return the result of the call to `deserialize' on it.
 On failure, create a backup of the file."
   (alexandria:read-file-into-string (expand file)))
 
-(defmethod read-file ((profile profile) (file gpg-file))
+(defmethod read-file ((profile profile) (file gpg-file) &key)
   "Decrypt FILE with GPG.
 See `*gpg-default-recipient*'."
   ;; TODO: Use (with-gpg-file).
@@ -353,11 +353,11 @@ See `*gpg-default-recipient*'."
    (lambda (stream)
      (alex:read-stream-content-into-string stream))))
 
-(defmethod read-file ((profile profile) (file virtual-file))
+(defmethod read-file ((profile profile) (file virtual-file) &key)
   "Don't load anything for virtual files."
   nil)
 
-(defmethod read-file ((profile virtual-profile) (file file))
+(defmethod read-file ((profile virtual-profile) (file file) &key)
   "Don't load anything when using the `virtual-profile'."
   nil)
 

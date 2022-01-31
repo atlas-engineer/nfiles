@@ -96,7 +96,7 @@
       1))
     (:accessor-name-transformer (class*:make-name-transformer name)))
 
-(defmethod nfiles:serialize ((profile nfiles:profile) (file slow-file))
+(defmethod nfiles:serialize ((profile nfiles:profile) (file slow-file) &key)
   (incf (write-count file))
   (call-next-method))
 
