@@ -128,15 +128,13 @@
   (let ((file (make-instance 'slow-file :base-path "qux"))
         (test-content "Skip test")
         (limit 5))
-    (setf (nfiles:content file) test-content)
-    ;; Wait for worker to be done writing the first file.
-    (loop until (uiop:file-exists-p (nfiles:expand file))
-          do (sleep 0.1))
-    (dotimes (i limit)
-      (setf (nfiles:content file) (format nil "~a: ~a" test-content i)) )
-    ;; Wait for worker's notification (potentially as long as 1 timeout) + final
-    ;; timeout.
-    (sleep (+ 1 (* 2 (nfiles:timeout file))))
+    ;; Wait for worker to be done writing the file.
+    (bt:join-thread (setf (nfiles:content file) test-content))
+    (let ((last-thread nil))
+      (dotimes (i limit)
+        (setf last-thread
+              (setf (nfiles:content file) (format nil "~a: ~a" test-content i))) )
+      (bt:join-thread last-thread))
     (is (nfiles::worker (nfiles::cache-entry file)) nil)
     (is (write-count file) 2)
     (is (nfiles:content file) (format nil "~a: ~a" test-content (1- limit)))))

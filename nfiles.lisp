@@ -440,9 +440,13 @@ Return the number of decrements, or NIL if there was none."
                         (worker cache-entry) nil))))))
       (maybe-write))))
 
-;; TODO: For now this returns the worker thread, which is interesting to know
-;; when it's finished.  Officialize this API point?
 (defmethod (setf content) (value (file file))
+  "Set FILE content to VALUE and persist change to disk.
+While the content of the FILE object is updated instantly, the file is persisted
+in the background.
+
+Return a `bt:thread' object.  Call `bt:join-thread' on it to know when it's done
+writing the file."
   (let ((entry (cache-entry file)))
     (sera:synchronized (entry)
       (setf (cached-value entry) value)
@@ -453,7 +457,8 @@ Return the number of decrements, or NIL if there was none."
         (setf (worker entry)
               (bt:make-thread (make-worker file entry)
                               :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
-                              :name "NFiles worker"))))))
+                              :name "NFiles worker")))
+      (worker entry))))
 
 (export-always 'with-file-content)
 (defmacro with-file-content ((content file) &body body)
