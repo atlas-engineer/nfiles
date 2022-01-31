@@ -13,6 +13,7 @@
                trivial-garbage)
   :components
   ((:file "package")
+   (:file "pathname-helpers")
    (:file "nfiles")))
 
 (defsystem "nfiles/tests"

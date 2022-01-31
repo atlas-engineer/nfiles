@@ -154,9 +154,6 @@ See `expand' for a convenience wrapper."))
 ;; Now that we have `read' and `write', maybe not so much.
 ;; But who knows... Plus for consistency with other methods, we can keep the same parameters.
 
-(defun nil-pathname-p (pathname)
-  (uiop:pathname-equal pathname (uiop:nil-pathname)))
-
 (export-always 'deserialize)
 (defgeneric deserialize (profile file raw-content)
   (:method ((profile profile) (file file) raw-content)
