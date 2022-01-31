@@ -1,7 +1,7 @@
 #+TITLE: NFiles
 
 NFiles is a Common Lisp library to help manage file persistence and loading, in
-particular user-generated files like configuration files and cache files.
+particular user-centric files like configuration files.
 
 ** Goals
 
@@ -27,7 +27,7 @@ particular user-generated files like configuration files and cache files.
 # TODO: On-the-fly compression?  Users should prefer compression at the level of
 # the file system.
 
-** Why?
+** Motivation
 
 This package was developed after dealing with a pickle when delivering Common
 Lisp images.
@@ -56,8 +56,13 @@ on their machine instead of the expected
 
 ** Examples
 
-# TODO: Finish!
+To be continued.
 
 ** Roadmap
 
 - Support OS-level locks (à-la Emacs / LibreOffice).
+
+** History
+
+NFiles was originally developed for user file management in [[https://nyxt.atlas.engineer][Nyxt]], so the "N"
+may stand for it, or "New", or whatever poetic meaning you may find behind it!
