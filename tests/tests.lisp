@@ -48,6 +48,16 @@
     (is (nfiles:expand file)
         (uiop:xdg-config-home "myapp/init.lisp"))))
 
+(nfile-test "Read-only file"
+  (let ((file (make-instance 'nfiles:read-only-file :path "should-not-exist")))
+    (setf (nfiles:content file) "foo")
+    (is (nfiles:expand file)
+        (uiop:merge-pathnames* "should-not-exist" *test-dir*)
+        :test #'uiop:pathname-equal)
+    (is (find-if (lambda (filename) (search "should-not-exist" filename))
+                 (mapcar #'pathname-name (uiop:directory-files *test-dir*)))
+        nil)))
+
 (nfile-test "Simple write"
   (let ((file (make-instance 'nfiles:file :path "foo"))
         (test-content "Hello world!"))
