@@ -331,7 +331,7 @@ See `write-file' for the reverse action."))
 (defmethod read-file ((profile profile) (file file) &key)
   "Load FILE then return the result of the call to `deserialize' on it.
 On failure, create a backup of the file."
-  (alexandria:read-file-into-string (expand file)))
+  (alex:read-file-into-string (expand file)))
 
 (defmethod read-file ((profile profile) (file gpg-file) &key)
   "Decrypt FILE with GPG.
@@ -394,12 +394,12 @@ entry's `cached-value'. ")
 (defun cache-entry (file)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
-    (alexandria:ensure-gethash (let ((path (expand file)))
-                                 (if (nil-pathname-p path)
-                                     file
-                                     path))
-                               *cache*
-                               (make-instance 'cache-entry :source-file file))))
+    (alex:ensure-gethash (let ((path (expand file)))
+                           (if (nil-pathname-p path)
+                               file
+                               path))
+                         *cache*
+                         (make-instance 'cache-entry :source-file file))))
 
 (export-always 'content)
 (defmethod content ((file file))

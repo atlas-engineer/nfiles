@@ -28,7 +28,7 @@
         :test 'uiop:pathname-equal)))
 
 (nfile-test "Current dir change"
-  (let* ((file (make-instance 'nfiles:file :base-path "foo" ))
+  (let* ((file (make-instance 'nfiles:file :base-path "foo"))
          (old-path (nfiles:expand file)))
     (uiop:with-current-directory ((uiop:temporary-directory))
       (isnt (nfiles:expand file) old-path))))
