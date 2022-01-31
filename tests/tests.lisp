@@ -74,6 +74,24 @@
     (is (nfiles:content file)
         test-content)))
 
+(nfile-test "Preserve attributes"
+  (let ((file (make-instance 'nfiles:file :base-path "private"))
+        (test-content "Hello world!")
+        (new-content "Hello new world!"))
+    (setf (nfiles:content file) test-content)
+    (sleep 1)                           ; Wait for file write.
+    (let ((permissions (nfiles:permissions (nfiles:expand file))))
+      (if (member :other-read permissions)
+          (setf permissions (remove :other-read permissions))
+          (push :other-read permissions))
+      (setf (nfiles:permissions (nfiles:expand file))
+            permissions)
+      (sleep 1)                         ; Wait for file write.
+      (setf (nfiles:content file) new-content)
+      (sleep 1)                         ; Wait for file write.
+      (is (nfiles:permissions (nfiles:expand file))
+          permissions))))
+
 (nfile-test "Read non-existing file"
   (let ((file (make-instance 'nfiles:file :base-path "bar")))
     (is (nfiles:content file)

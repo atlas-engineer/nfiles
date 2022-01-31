@@ -9,6 +9,8 @@
   :in-order-to ((test-op (test-op "nfiles/tests")))
   :depends-on (alexandria
                hu.dwim.defclass-star
+               #-sbcl
+               iolib/os
                serapeum
                trivial-garbage)
   :components

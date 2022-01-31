@@ -110,6 +110,8 @@ The specialization methods are divided into the following:
 
 - Improve PGP support.
 - Support OS-level locks (à-la Emacs / LibreOffice).
+- Improve portability, in particular preservation of file attributes may not
+  work on Windows.
 
 ** History
 

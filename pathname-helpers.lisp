@@ -30,3 +30,69 @@
          (if (uiop:directory-pathname-p path)
              (uiop:pathname-parent-directory-pathname path)
              (uiop:pathname-directory-pathname path)))))
+
+(alex:define-constant +permissions+
+    '((:user-read . 256) (:user-write . 128) (:user-exec . 64) (:group-read . 32)
+      (:group-write . 16) (:group-exec . 8) (:other-read . 4) (:other-write . 2)
+      (:other-exec . 1) (:set-user-id . 2048) (:set-group-id . 1024) (:sticky . 512))
+  :test #'equal)
+
+(export-always 'permissions)
+(defmethod permissions (path)
+  "Return a list of permissions as per `+permissions+'."
+  #+sbcl
+  (let ((mode (sb-posix:stat-mode
+               (sb-posix:stat path))))
+    (loop :for (name . value) :in +permissions+
+          :when (plusp (logand mode value))
+            :collect name))
+  #-sbcl
+  (iolib/os:file-permissions path))
+
+(defmethod (setf permissions) (permissions path)
+  "Set the PERMISSIONS or PATH as per `+permissions+'."
+  #+sbcl
+  (sb-posix:chmod path
+                  (reduce (lambda (a b)
+                            (logior a (rest (assoc b +permissions+))))
+                          permissions :initial-value 0))
+  #-sbcl
+  (setf (iolib/os:file-permissions path) permissions))
+
+(export-always 'file-user)
+(defmethod file-user (path)
+  "Return PATH owner name."
+  (file-author path))
+
+(defmethod (setf file-user) (new-user path)
+  "Set PATH owner to NEW-USER (a string)."
+  #+sbcl
+  (sb-posix:chown path
+                  (sb-posix:passwd-uid (sb-posix:getpwnam new-user))
+                  (sb-posix:stat-gid (sb-posix:stat path)))
+  #-sbcl
+  (iolib/syscalls:chown path
+                        (nth-value 2 (iolib/syscalls:getpwnam new-user))
+                        (iolib/syscalls:stat-gid (iolib/syscalls:stat path))))
+
+(export-always 'file-group)
+(defmethod file-group (path)
+  "Return PATH group name."
+  #+sbcl
+  (sb-posix:group-name
+   (sb-posix:getgrgid (sb-posix:stat-gid
+                       (sb-posix:stat path))))
+  #-sbcl
+  (iolib/syscalls:getgrgid (iolib/syscalls:stat-gid
+                            (iolib/syscalls:stat path))))
+
+(defmethod (setf file-group) (new-group path)
+  "Set PATH group to NEW-GROUP (a string)."
+  #+sbcl
+  (sb-posix:chown path
+                  (sb-posix:stat-uid (sb-posix:stat path))
+                  (sb-posix:group-gid (sb-posix:getgrnam new-group)))
+  #-sbcl
+  (iolib/syscalls:chown path
+                        (iolib/syscalls:stat-uid (iolib/syscalls:stat path))
+                        (nth-value 2 (iolib/syscalls:getgrnam new-group))))

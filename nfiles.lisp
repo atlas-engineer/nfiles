@@ -4,6 +4,7 @@
 (in-package :nfiles)
 
 ;; TODO: Handle write errors (e.g. when trying to write to /root).
+;; TODO: Follow symlinks.  Use lstat in the pathname helpers?
 
 (defclass* profile ()
   ((name "default"
@@ -275,11 +276,15 @@ See `read-file' for the reverse action."))
 
 (defmethod write-file ((profile profile) (file file) &key)
   "Write the result of `serialize' to the `file' path."
-  (let ((destination (expand file)))
-    ;; TODO: Preserve permissions.
+  (let* ((path (expand file))
+         (destination path)
+         (permissions (when (uiop:file-exists-p path) (permissions path))))
     (uiop:with-staging-pathname (destination)
       (alex:write-string-into-file (serialize profile file) destination
-                                   :if-exists :supersede))))
+                                   :if-exists :supersede))
+    (when permissions
+      (setf (permissions path)
+            permissions))))
 
 (defmethod write-file ((profile profile) (file gpg-file) &key)
   "Crypt to FILE with GPG.
@@ -435,6 +440,8 @@ Return the number of decrements, or NIL if there was none."
                         (worker cache-entry) nil))))))
       (maybe-write))))
 
+;; TODO: For now this returns the worker thread, which is interesting to know
+;; when it's finished.  Officialize this API point?
 (defmethod (setf content) (value (file file))
   (let ((entry (cache-entry file)))
     (sera:synchronized (entry)
