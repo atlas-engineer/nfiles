@@ -38,8 +38,7 @@
 
 (defmethod nfiles:resolve ((profile nfiles:profile) (file myapp-file))
   (let ((path (call-next-method)))
-    (make-pathname :defaults path
-                   :directory (pathname-directory (uiop:merge-pathnames* "myapp/" (uiop:pathname-directory-pathname path))))))
+    (uiop:merge-pathnames* #p"myapp/" path)))
 
 (defclass* myapp-config-file (myapp-file nfiles:lisp-file nfiles:config-file)
     ())
