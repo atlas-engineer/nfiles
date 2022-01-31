@@ -36,6 +36,11 @@ removed.")
     (:export-class-name-p t)
     (:documentation "In this profile, files are neither read nor written to by default."))
 
+(export-always 'find-profile)
+(defgeneric find-profile (designator)
+  (:documentation "Return a profile matching DESIGNATOR among all instantiated
+`profile'."))
+
 (defmethod find-profile ((name string))
   (loop for profile being the hash-key of *profile-index*
         when (string= name (name profile))
