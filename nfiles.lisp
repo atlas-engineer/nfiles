@@ -238,7 +238,7 @@ See `read-file' for the reverse action."))
   "Crypt to FILE with GPG.
 See `*gpg-default-recipient*'."
   ;; TODO: Use (with-gpg-file).
-  (call-with-gpg-file
+  (nfiles/gpg::call-with-gpg-file
    (expand file)
    '(:direction :output)
    (lambda (stream)
@@ -293,7 +293,7 @@ On failure, create a backup of the file."
   "Decrypt FILE with GPG.
 See `*gpg-default-recipient*'."
   ;; TODO: Use (with-gpg-file).
-  (call-with-gpg-file
+  (nfiles/gpg::call-with-gpg-file
    (expand file)
    '(:direction :input)
    (lambda (stream)

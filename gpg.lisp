@@ -1,26 +1,36 @@
 ;;;; SPDX-FileCopyrightText: Atlas Engineer LLC
 ;;;; SPDX-License-Identifier: BSD-3-Clause
 
-(in-package :nfiles)
+(in-package :nfiles/gpg)
 
+(export-always '*gpg-program*)
 (defvar *gpg-program* "gpg")
 
+(export-always '*gpg-default-recipient*)
 (defvar *gpg-default-recipient* nil)
 
-(defstruct gpg-uid
-  validity
-  user-id)
+(defclass* gpg-uid ()
+  ((validity)
+   (user-id))
+  (:export-class-name-p t)
+  (:export-accessor-names-p t)
+  (:accessor-name-transformer (class*:make-name-transformer name)))
 
-(defstruct gpg-key
-  length
-  algorithm                             ; See https://tools.ietf.org/html/rfc4880#page-62 for the meaning of the algorithm ID.
-  key-id
-  creation-date
-  expiry-date
-  uids
-  fingerprint
-  keygrip)
+(defclass* gpg-key ()
+  ((key-length)
+   ;; See https://tools.ietf.org/html/rfc4880#page-62 for the meaning of the algorithm ID.
+   (algorithm)
+   (key-id)
+   (creation-date)
+   (expiry-date)
+   (uids)
+   (fingerprint)
+   (keygrip))
+  (:export-class-name-p t)
+  (:export-accessor-names-p t)
+  (:accessor-name-transformer (class*:make-name-transformer name)))
 
+(export-always 'gpg-private-keys)
 (defun gpg-private-keys ()
   "Return list of private `gpg-key's."
   (let* ((entries (delete ""
@@ -35,14 +45,14 @@
     (mapcar (lambda (entry)
               (let ((key (first entry))
                     (uids (remove-if (lambda (e) (not (string= "uid" (first e)))) entry)))
-                (make-gpg-key
-                 :length (parse-integer (third key) :junk-allowed t)
+                (make-instance 'gpg-key
+                 :key-length (parse-integer (third key) :junk-allowed t)
                  :algorithm (fourth key)
                  :key-id (fifth key)
                  :creation-date (ignore-errors (local-time:unix-to-timestamp (parse-integer (sixth key))))
                  :expiry-date (ignore-errors (local-time:unix-to-timestamp (parse-integer (seventh key))))
                  :uids (mapcar (lambda (uid-entry)
-                                 (make-gpg-uid
+                                 (make-instance 'gpg-uid
                                   :validity (second uid-entry)
                                   :user-id (nth 9 uid-entry)))
                                uids)

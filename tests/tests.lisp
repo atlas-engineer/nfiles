@@ -120,7 +120,7 @@
 (nfile-test "GPG test"
   (let ((file (make-instance 'nfiles:gpg-file :path "fog"))
         (test-content "Cryptic world")
-        (nfiles::*gpg-default-recipient* "mail@ambrevar.xyz"))
+        (nfiles/gpg:*gpg-default-recipient* "mail@ambrevar.xyz"))
     (setf (nfiles:content file) test-content)
     (sleep 1)                           ; Wait for write.
     (ok (uiop:file-exists-p (nfiles:expand file)))
