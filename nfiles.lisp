@@ -92,12 +92,7 @@ The profile is only set at instantiation time.")
    (timeout                             ; Unexport? Make global option?
     0.1
     :type real
-    :documentation "Time in seconds to wait for other write requests.")
-   (writable                            ; TODO: Remove?
-    t
-    :type boolean
-    :documentation "If T, the file is writable.
-If NIL, then attempting to write to the file raises an error."))
+    :documentation "Time in seconds to wait for other write requests."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
@@ -470,11 +465,3 @@ The new value of CONTENT is saved to FILE on exit."
   `(let ((,content (content ,file)))
      (unwind-protect (progn ,@body)
        (setf (content ,file) ,content))))
-
-;; TODO: Useless?
-(defmacro with-existing-content ((content file) &body body) ; TODO: Add default keyword parameter?
-  "Bind CONTENT to FILE's content in BODY.
-If CONTENT is NIL, BODY is ignored.
-Unlike with `with-file-content', the file is not written to."
-  `(alex:when-let ((,content (content ,file)))
-     ,@body))
