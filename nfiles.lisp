@@ -67,8 +67,9 @@ removed.")
   ((path                                ; TODO: Rename to `base-path'?
     #p""
     :type pathname
-    :export nil
-    :initarg nil
+    :export t
+    :reader t
+    :writer nil
     :documentation "")
    (profile
     *default-profile*
@@ -169,7 +170,7 @@ removed.")
       result)))
 
 (defmethod initialize-instance :after ((file file) &key (path (error "Path required.")))
-  (setf (path file) (uiop:ensure-pathname path))
+  (setf (slot-value file 'path) (uiop:ensure-pathname path))
   (setf (gethash file *index*) file))
 
 ;; TODO: Useless?
