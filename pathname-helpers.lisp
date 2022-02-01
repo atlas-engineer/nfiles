@@ -42,7 +42,7 @@
   "Return a list of permissions as per `+permissions+'."
   #+sbcl
   (let ((mode (sb-posix:stat-mode
-               (sb-posix:stat path))))
+               (sb-posix:lstat path))))
     (loop :for (name . value) :in +permissions+
           :when (plusp (logand mode value))
             :collect name))
@@ -69,11 +69,11 @@
   #+sbcl
   (sb-posix:chown path
                   (sb-posix:passwd-uid (sb-posix:getpwnam new-user))
-                  (sb-posix:stat-gid (sb-posix:stat path)))
+                  (sb-posix:stat-gid (sb-posix:lstat path)))
   #-sbcl
   (iolib/syscalls:chown path
                         (nth-value 2 (iolib/syscalls:getpwnam new-user))
-                        (iolib/syscalls:stat-gid (iolib/syscalls:stat path))))
+                        (iolib/syscalls:stat-gid (iolib/syscalls:lstat path))))
 
 (export-always 'file-group)
 (defmethod file-group (path)
@@ -81,18 +81,18 @@
   #+sbcl
   (sb-posix:group-name
    (sb-posix:getgrgid (sb-posix:stat-gid
-                       (sb-posix:stat path))))
+                       (sb-posix:lstat path))))
   #-sbcl
   (iolib/syscalls:getgrgid (iolib/syscalls:stat-gid
-                            (iolib/syscalls:stat path))))
+                            (iolib/syscalls:lstat path))))
 
 (defmethod (setf file-group) (new-group path)
   "Set PATH group to NEW-GROUP (a string)."
   #+sbcl
   (sb-posix:chown path
-                  (sb-posix:stat-uid (sb-posix:stat path))
+                  (sb-posix:stat-uid (sb-posix:lstat path))
                   (sb-posix:group-gid (sb-posix:getgrnam new-group)))
   #-sbcl
   (iolib/syscalls:chown path
-                        (iolib/syscalls:stat-uid (iolib/syscalls:stat path))
+                        (iolib/syscalls:stat-uid (iolib/syscalls:lstat path))
                         (nth-value 2 (iolib/syscalls:getgrnam new-group))))

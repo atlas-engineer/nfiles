@@ -64,6 +64,19 @@
                  (mapcar #'pathname-name (uiop:directory-files *test-dir*)))
         nil)))
 
+(subtest "Symlinks"
+  (uiop:with-current-directory ((uiop:merge-pathnames*
+                                 "tests"
+                                 (asdf:system-source-directory (asdf:find-system :nfiles))))
+
+    (let ((file (make-instance 'nfiles:file :base-path "link-to-dummy")))
+      (is (nfiles:expand file)
+          (uiop:ensure-pathname "dummy" :truenamize t))
+      (let ((content (nfiles:content file)))
+        (setf (nfiles:content file) content)
+        (is (nfiles:expand (make-instance 'nfiles:file :base-path "link-to-dummy"))
+            (uiop:ensure-pathname "dummy" :truenamize t))))))
+
 (nfile-test "Simple write"
   (let ((file (make-instance 'nfiles:file :base-path "foo"))
         (test-content "Hello world!"))

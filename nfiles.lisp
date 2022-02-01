@@ -5,7 +5,6 @@
 
 ;; TODO: Test with CCL.
 ;; TODO: Handle write errors (e.g. when trying to write to /root).
-;; TODO: Follow symlinks.  Use lstat in the pathname helpers?
 
 (defclass* profile ()
   ((name "default"
