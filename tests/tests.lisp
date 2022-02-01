@@ -67,8 +67,7 @@
 (nfile-test "Simple write"
   (let ((file (make-instance 'nfiles:file :base-path "foo"))
         (test-content "Hello world!"))
-    (setf (nfiles:content file) test-content)
-    (sleep 1)                           ; Wait for file write.
+    (bt:join-thread (setf (nfiles:content file) test-content))
     (is (alexandria:read-file-into-string (nfiles:expand file))
         test-content)
     (is (nfiles:content file)
@@ -78,17 +77,14 @@
   (let ((file (make-instance 'nfiles:file :base-path "private"))
         (test-content "Hello world!")
         (new-content "Hello new world!"))
-    (setf (nfiles:content file) test-content)
-    (sleep 1)                           ; Wait for file write.
+    (bt:join-thread (setf (nfiles:content file) test-content))
     (let ((permissions (nfiles:permissions (nfiles:expand file))))
       (if (member :other-read permissions)
           (setf permissions (remove :other-read permissions))
           (push :other-read permissions))
       (setf (nfiles:permissions (nfiles:expand file))
             permissions)
-      (sleep 1)                         ; Wait for file write.
-      (setf (nfiles:content file) new-content)
-      (sleep 1)                         ; Wait for file write.
+      (bt:join-thread (setf (nfiles:content file) new-content))
       (is (nfiles:permissions (nfiles:expand file))
           permissions))))
 
@@ -142,8 +138,7 @@
   (let ((file (make-instance 'nfiles:gpg-file :base-path "fog"))
         (test-content "Cryptic world")
         (nfiles/gpg:*gpg-default-recipient* "mail@ambrevar.xyz"))
-    (setf (nfiles:content file) test-content)
-    (sleep 1)                           ; Wait for write.
+    (bt:join-thread (setf (nfiles:content file) test-content))
     (ok (uiop:file-exists-p (nfiles:expand file)))
     (is-error (alexandria:read-file-into-string (nfiles:expand file))
               'error)
