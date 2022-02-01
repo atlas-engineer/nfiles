@@ -163,8 +163,9 @@ removed.")
                *index*)
       result)))
 
-(defmethod initialize-instance :after ((file file) &key (base-path (error "Base path required.")))
-  (setf (slot-value file 'base-path) (uiop:ensure-pathname base-path))
+(defmethod initialize-instance :after ((file file) &key base-path)
+  (when base-path
+    (setf (slot-value file 'base-path) (uiop:ensure-pathname base-path)))
   (setf (gethash file *index*) file))
 
 ;; TODO: Useless?
