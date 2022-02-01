@@ -21,8 +21,10 @@
    ;; See https://tools.ietf.org/html/rfc4880#page-62 for the meaning of the algorithm ID.
    (algorithm)
    (key-id)
-   (creation-date)
-   (expiry-date)
+   (creation-date
+    :documentation "Stored as in Unix format.")
+   (expiry-date
+    :documentation "Stored as in Unix format.")
    (uids)
    (fingerprint)
    (keygrip))
@@ -30,16 +32,22 @@
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name)))
 
+(defun parse-gpg-secret-keys-output (output-string)
+  "Return the list of sections as a list of strings."
+  (mapcar (alex:rcurry #'sera:string-join #\newline)
+          (let ((result '()))
+            (dolist (line (sera:lines output-string))
+              (if (sera:string-prefix-p "sec" line)
+                  (push (list line) result)
+                  (nconc (first result) (list line))))
+            (nreverse result))))
+
 (export-always 'gpg-private-keys)
 (defun gpg-private-keys ()
   "Return list of private `gpg-key's."
-  (let* ((entries (delete ""
-                          (ppcre:split "\\bsec"
-                                       (with-output-to-string (s)
-                                         (uiop:run-program (list *gpg-program* "--list-secret-keys" "--with-colons")
-                                                           :output s)))
-                          :test #'string=))
-         (entries (mapcar (lambda (s) (uiop:strcat "sec" s)) entries))
+  (let* ((entries (parse-gpg-secret-keys-output
+                   (uiop:run-program (list *gpg-program* "--list-secret-keys" "--with-colons")
+                                     :output '(:string :stripped t))))
          (entries (mapcar (lambda (s) (delete-if #'uiop:emptyp (sera:lines s))) entries))
          (entries (mapcar (lambda (entry) (mapcar (lambda (s) (sera:split-sequence #\: s)) entry)) entries)))
     (mapcar (lambda (entry)
@@ -49,8 +57,8 @@
                  :key-length (parse-integer (third key) :junk-allowed t)
                  :algorithm (fourth key)
                  :key-id (fifth key)
-                 :creation-date (ignore-errors (local-time:unix-to-timestamp (parse-integer (sixth key))))
-                 :expiry-date (ignore-errors (local-time:unix-to-timestamp (parse-integer (seventh key))))
+                 :creation-date (ignore-errors (parse-integer (sixth key)))
+                 :expiry-date (ignore-errors (parse-integer (seventh key)))
                  :uids (mapcar (lambda (uid-entry)
                                  (make-instance 'gpg-uid
                                   :validity (second uid-entry)

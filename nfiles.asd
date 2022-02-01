@@ -12,7 +12,9 @@
                #-sbcl
                iolib/os
                serapeum
-               trivial-garbage)
+               trivial-garbage
+               trivial-package-local-nicknames
+               trivial-types)
   :components
   ((:file "package")
    (:file "pathname-helpers")
