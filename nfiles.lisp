@@ -74,6 +74,7 @@ removed.")
     #p""
     :type pathname
     :export t
+    :initarg nil
     :reader t
     :writer nil
     :documentation "")

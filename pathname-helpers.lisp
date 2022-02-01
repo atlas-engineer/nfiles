@@ -47,7 +47,7 @@
           :when (plusp (logand mode value))
             :collect name))
   #-sbcl
-  (iolib/os:file-permissions path))
+  (iolib/os:file-permissions (uiop:native-namestring path)))
 
 (defmethod (setf permissions) (permissions path)
   "Set the PERMISSIONS or PATH as per `+permissions+'."
@@ -57,7 +57,7 @@
                             (logior a (rest (assoc b +permissions+))))
                           permissions :initial-value 0))
   #-sbcl
-  (setf (iolib/os:file-permissions path) permissions))
+  (setf (iolib/os:file-permissions (uiop:native-namestring path)) permissions))
 
 (export-always 'file-user)
 (defmethod file-user (path)
@@ -71,9 +71,11 @@
                   (sb-posix:passwd-uid (sb-posix:getpwnam new-user))
                   (sb-posix:stat-gid (sb-posix:lstat path)))
   #-sbcl
-  (iolib/syscalls:chown path
-                        (nth-value 2 (iolib/syscalls:getpwnam new-user))
-                        (iolib/syscalls:stat-gid (iolib/syscalls:lstat path))))
+  (let ((native-path (uiop:native-namestring path)))
+    (iolib/syscalls:chown native-path
+                          (nth-value 2 (iolib/syscalls:getpwnam new-user))
+                          (iolib/syscalls:stat-gid (iolib/syscalls:lstat
+                                                    native-path)))))
 
 (export-always 'file-group)
 (defmethod file-group (path)
@@ -84,7 +86,8 @@
                        (sb-posix:lstat path))))
   #-sbcl
   (iolib/syscalls:getgrgid (iolib/syscalls:stat-gid
-                            (iolib/syscalls:lstat path))))
+                            (iolib/syscalls:lstat
+                             (uiop:native-namestring path)))))
 
 (defmethod (setf file-group) (new-group path)
   "Set PATH group to NEW-GROUP (a string)."
@@ -93,6 +96,8 @@
                   (sb-posix:stat-uid (sb-posix:lstat path))
                   (sb-posix:group-gid (sb-posix:getgrnam new-group)))
   #-sbcl
-  (iolib/syscalls:chown path
-                        (iolib/syscalls:stat-uid (iolib/syscalls:lstat path))
-                        (nth-value 2 (iolib/syscalls:getgrnam new-group))))
+  (let ((native-path (uiop:native-namestring path)))
+    (iolib/syscalls:chown native-path
+                          (iolib/syscalls:stat-uid (iolib/syscalls:lstat
+                                                    native-path))
+                          (nth-value 2 (iolib/syscalls:getgrnam new-group)))))
