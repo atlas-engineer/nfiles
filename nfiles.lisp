@@ -225,16 +225,20 @@ See `serialize' for the reverse action."))
 
 (defmethod deserialize :around ((profile profile) (file file) content &key)
   "Don't try deserialize if there is no file."
+  (declare (ignore content))
   (unless (nil-pathname-p (expand file))
     (call-next-method)))
 
 (defmethod deserialize ((profile profile) (file lisp-file) content &key)
+  (declare (ignore content))
   (read-from-string (call-next-method)))
 
 (defmethod deserialize ((profile profile) (file virtual-file) content &key)
+  (declare (ignore content))
   nil)
 
 (defmethod deserialize ((profile virtual-profile) (file file) content &key)
+  (declare (ignore content))
   nil)
 
 ;; TODO: Can serialization methods be compounded?
