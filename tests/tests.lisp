@@ -153,8 +153,12 @@
         (nfiles/gpg:*gpg-default-recipient* "mail@ambrevar.xyz"))
     (bt:join-thread (setf (nfiles:content file) test-content))
     (ok (uiop:file-exists-p (nfiles:expand file)))
+    #+sbcl
     (is-error (alexandria:read-file-into-string (nfiles:expand file))
               'error)
+    #+ccl
+    (isnt (alexandria:read-file-into-string (nfiles:expand file))
+          test-content)
     (nfiles::clear-cache)
     (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path "fog")))
       (is (nfiles:content synonym-file) test-content))))
