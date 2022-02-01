@@ -275,13 +275,23 @@ See `read-file' for the reverse action."))
   "Write the result of `serialize' to the `file' path."
   (let* ((path (expand file))
          (destination path)
-         (permissions (when (uiop:file-exists-p path) (permissions path))))
+         (exists? (uiop:file-exists-p path))
+         (permissions nil)
+         (user nil)
+         (group nil))
+    (when exists?
+      (setf
+       permissions (permissions path)
+       user (file-user path)
+       group (file-group path)))
     (uiop:with-staging-pathname (destination)
       (alex:write-string-into-file (serialize profile file) destination
                                    :if-exists :supersede))
-    (when permissions
-      (setf (permissions path)
-            permissions))))
+    (when exists?
+      (setf
+       (permissions path) permissions
+       (file-user path) user
+       (file-group path) group))))
 
 (defmethod write-file ((profile profile) (file gpg-file) &key)
   "Crypt to FILE with GPG.
