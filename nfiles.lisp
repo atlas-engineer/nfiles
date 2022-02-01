@@ -199,14 +199,19 @@ See `expand' for a convenience wrapper."))
                                (uiop:strcat (pathname-name path) "." ext)
                                (pathname-name path))))))
 
+(defun maybe-xdg (xdg-fun path)
+  (if (uiop:absolute-pathname-p path)
+      path
+      (funcall xdg-fun path)))
+
 (defmethod resolve ((profile profile) (file config-file))
-  (uiop:xdg-config-home (call-next-method)))
+  (maybe-xdg #'uiop:xdg-config-home (call-next-method)))
 
 (defmethod resolve ((profile profile) (file cache-file))
-  (uiop:xdg-cache-home (call-next-method)))
+  (maybe-xdg #'uiop:xdg-cache-home (call-next-method)))
 
 (defmethod resolve ((profile profile) (file data-file))
-  (uiop:xdg-data-home (call-next-method)))
+  (maybe-xdg #'uiop:xdg-data-home (call-next-method)))
 
 ;; TODO: Does it make sense to serialize / deserialize over a profile?
 ;; Yes, because this is where we chose to not touch the filesystem, or to be read-only.
