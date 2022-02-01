@@ -115,9 +115,7 @@
 (defclass* slow-file (nfiles:file)
     ((write-count
       0
-      :type integer)
-     (nfiles:timeout
-      1))
+      :type integer))
     (:accessor-name-transformer (class*:make-name-transformer name)))
 
 (defmethod nfiles:serialize ((profile nfiles:profile) (file slow-file) &key)
@@ -127,7 +125,8 @@
 (nfile-test "Skip useless writes"
   (let ((file (make-instance 'slow-file :base-path "qux"))
         (test-content "Skip test")
-        (limit 5))
+        (limit 5)
+        (nfiles::*timeout* 1))
     ;; Wait for worker to be done writing the file.
     (bt:join-thread (setf (nfiles:content file) test-content))
     (let ((last-thread nil))

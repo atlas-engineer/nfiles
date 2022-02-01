@@ -3,6 +3,7 @@
 
 (in-package :nfiles)
 
+;; TODO: Test with CCL.
 ;; TODO: Handle write errors (e.g. when trying to write to /root).
 ;; TODO: Follow symlinks.  Use lstat in the pathname helpers?
 
@@ -89,11 +90,7 @@ The profile is only set at instantiation time.")
    (name
     ""
     :type string
-    :documentation "Name used to identify the object in a human-readable manner.")
-   (timeout                             ; Unexport? Make global option?
-    0.1
-    :type real
-    :documentation "Time in seconds to wait for other write requests."))
+    :documentation "Name used to identify the object in a human-readable manner."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
@@ -426,10 +423,14 @@ Return the number of decrements, or NIL if there was none."
       (drain))
     decrement-count))
 
+(declaim (type real *timeout*))
+(defvar *timeout* 0.1
+  "Time in seconds to wait for other write requests.")
+
 (defun make-worker (file cache-entry)
   (lambda ()
     (labels ((maybe-write ()
-               (let ((write-signaled? (drain-semaphore (worker-notifier cache-entry) (timeout file))))
+               (let ((write-signaled? (drain-semaphore (worker-notifier cache-entry) *timeout*)))
                  (if write-signaled?
                      (progn
                        (write-file (profile file) file)
