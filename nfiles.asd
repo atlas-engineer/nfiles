@@ -24,4 +24,4 @@
 (defsystem "nfiles/tests"
   :depends-on (nfiles prove)
   :perform (test-op (op c)
-                    (nyxt-run-test c "tests/")))
+                    (symbol-call :prove :run "tests/")))
