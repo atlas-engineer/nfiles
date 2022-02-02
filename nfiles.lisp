@@ -483,5 +483,5 @@ writing the file."
 In case there's no content, bind CONTENT to DEFAULT.
 The new value of CONTENT is saved to FILE on exit."
   `(let ((,content (or (content ,file) ,default)))
-     (unwind-protect (progn ,@body)
+     (prog1 (progn ,@body)
        (setf (content ,file) ,content))))
