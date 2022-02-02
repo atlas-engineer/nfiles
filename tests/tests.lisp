@@ -86,6 +86,13 @@
     (is (nfiles:content file)
         test-content)))
 
+(nfile-test "Parent creation"
+  (let ((file (make-instance 'nfiles:file :base-path "foo/bar"))
+        (test-content "Hello world!"))
+    (bt:join-thread (setf (nfiles:content file) test-content))
+    (is (alexandria:read-file-into-string (nfiles:expand file))
+        test-content)))
+
 (nfile-test "Preserve attributes"
   (let ((file (make-instance 'nfiles:file :base-path "private"))
         (test-content "Hello world!")
