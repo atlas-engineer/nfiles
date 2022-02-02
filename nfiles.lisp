@@ -478,9 +478,10 @@ writing the file."
       (worker entry))))
 
 (export-always 'with-file-content)
-(defmacro with-file-content ((content file) &body body)
+(defmacro with-file-content ((content file &key default) &body body)
   "Bind CONTENT to FILE's content in BODY.
+In case there's no content, bind CONTENT to DEFAULT.
 The new value of CONTENT is saved to FILE on exit."
-  `(let ((,content (content ,file)))
+  `(let ((,content (or (content ,file) ,default)))
      (unwind-protect (progn ,@body)
        (setf (content ,file) ,content))))
