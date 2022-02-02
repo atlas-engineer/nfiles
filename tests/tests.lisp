@@ -134,7 +134,8 @@
       :type integer))
     (:accessor-name-transformer (class*:make-name-transformer name)))
 
-(defmethod nfiles:serialize ((profile nfiles:profile) (file slow-file) &key)
+(defmethod nfiles:serialize ((profile nfiles:profile) (file slow-file) stream &key)
+  (declare (ignore stream))
   (incf (write-count file))
   (call-next-method))
 
