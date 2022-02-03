@@ -66,7 +66,7 @@
 
 (subtest "Symlinks"
   (uiop:with-current-directory ((uiop:merge-pathnames*
-                                 "tests"
+                                 "test-data"
                                  (asdf:system-source-directory (asdf:find-system :nfiles))))
 
     (let ((file (make-instance 'nfiles:file :base-path "link-to-dummy")))
