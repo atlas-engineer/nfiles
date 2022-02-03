@@ -226,32 +226,32 @@ See `expand' for a convenience wrapper."))
   (maybe-xdg #'uiop:xdg-runtime-dir (call-next-method)))
 
 (export-always 'deserialize)
-(defgeneric deserialize (profile file raw-content &key &allow-other-keys)
-  (:method ((profile profile) (file file) raw-content &key)
-    raw-content)
-  (:documentation "Transform RAW-CONTENT (a stream) into a useful form
+(defgeneric deserialize (profile file stream &key &allow-other-keys)
+  (:method ((profile profile) (file file) stream &key)
+    stream)
+  (:documentation "Transform STREAM into a useful form
 ready to be manipulated on the Lisp side.
 See `serialize' for the reverse action."))
 
-(defmethod deserialize :around ((profile profile) (file file) content &key)
+(defmethod deserialize :around ((profile profile) (file file) stream &key)
   "Don't try deserialize if there is no file."
-  (declare (ignore content))
+  (declare (ignore stream))
   (unless (nil-pathname-p (expand file))
     (let ((result (call-next-method)))
       (if (streamp result)
           (alex:read-stream-content-into-string result)
           result))))
 
-(defmethod deserialize ((profile profile) (file lisp-file) content &key)
-  (declare (ignore content))
+(defmethod deserialize ((profile profile) (file lisp-file) stream &key)
+  (declare (ignore stream))
   (read (call-next-method)))
 
-(defmethod deserialize ((profile profile) (file virtual-file) content &key)
-  (declare (ignore content))
+(defmethod deserialize ((profile profile) (file virtual-file) stream &key)
+  (declare (ignore stream))
   nil)
 
-(defmethod deserialize ((profile virtual-profile) (file file) content &key)
-  (declare (ignore content))
+(defmethod deserialize ((profile virtual-profile) (file file) stream &key)
+  (declare (ignore stream))
   nil)
 
 ;; TODO: Can serialization methods be compounded?
