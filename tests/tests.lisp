@@ -113,13 +113,59 @@
     (is (nfiles:content file)
         nil)))
 
+(defclass* counter-file (nfiles:file)
+    ((write-count
+      0
+      :type integer)
+     (read-count
+      0
+      :type integer))
+    (:accessor-name-transformer (class*:make-name-transformer name)))
+
+(defmethod nfiles:write-file ((profile nfiles:profile) (file counter-file) &key)
+  (incf (write-count file))
+  (call-next-method))
+
+(defmethod nfiles:read-file ((profile nfiles:profile) (file counter-file) &key)
+  (incf (read-count file))
+  (call-next-method))
+
+(nfile-test "Cache"
+  (let ((file1 (make-instance 'counter-file :base-path "foo"))
+        (file2 (make-instance 'counter-file :base-path "bar"))
+        (test-content "Hello world!")
+        (test-content2 "Hello new world!"))
+
+    (is (nfiles:content file1) nil)
+    (is (read-count file1) 0)
+    (is (write-count file1) 0)
+    (bt:join-thread (setf (nfiles:content file1) test-content))
+    (is (read-count file1) 0)
+    (is (write-count file1) 1)
+
+    (is (nfiles:content file1)
+        test-content)
+    (is (read-count file1) 0)
+    (is (write-count file1) 1)
+
+    (alexandria:write-string-into-file test-content (nfiles:expand file2))
+    (is (nfiles:content file2)
+        test-content)
+    (is (read-count file2) 1)
+    (is (write-count file2) 0)
+    (sleep 1)      ; Need to sleep 1s because time resolution is to the second.
+    (bt:join-thread (setf (nfiles:content file2) test-content2))
+    (is (nfiles:content file2) test-content2)
+    (is (read-count file2) 1)
+    (is (write-count file2) 1)))
+
 (nfile-test "Cache auto-load"
   (let ((file1 (make-instance 'nfiles:file :base-path "foo"))
         (file2 (make-instance 'nfiles:file :base-path "foo"))
         (test-content "Hello world!")
         (test-content2 "Hello altered world!"))
     (bt:join-thread (setf (nfiles:content file1) test-content))
-    (sleep 1) ; Need to sleep 1s because time resolution is to the second.
+    (sleep 1)       ; Need to sleep 1s because time resolution is to the second.
     (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
                                        :if-exists :supersede)
     (is (nfiles:content file1)
@@ -154,19 +200,8 @@
       (ok (find-if (lambda (filename) (search "-backup" filename))
                    (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
-(defclass* slow-file (nfiles:file)
-    ((write-count
-      0
-      :type integer))
-    (:accessor-name-transformer (class*:make-name-transformer name)))
-
-(defmethod nfiles:serialize ((profile nfiles:profile) (file slow-file) stream &key)
-  (declare (ignore stream))
-  (incf (write-count file))
-  (call-next-method))
-
 (nfile-test "Skip useless writes"
-  (let ((file (make-instance 'slow-file :base-path "qux"))
+  (let ((file (make-instance 'counter-file :base-path "qux"))
         (test-content "Skip test")
         (limit 5)
         (nfiles::*timeout* 1))
