@@ -116,6 +116,11 @@ not provided."))
     (:export-class-name-p t)
     (:documentation "Like regular `file' but set directory to `uiop:xdg-data-home'"))
 
+(defclass* runtime-file (file)
+    ()
+    (:export-class-name-p t)
+    (:documentation "Like regular `file' but set directory to `uiop:xdg-runtime-dir'"))
+
 (defclass* gpg-file (file)
     ()
     (:export-class-name-p t)
@@ -211,6 +216,9 @@ See `expand' for a convenience wrapper."))
 
 (defmethod resolve ((profile profile) (file data-file))
   (maybe-xdg #'uiop:xdg-data-home (call-next-method)))
+
+(defmethod resolve ((profile profile) (file runtime-file))
+  (maybe-xdg #'uiop:xdg-runtime-dir (call-next-method)))
 
 (export-always 'deserialize)
 (defgeneric deserialize (profile file raw-content &key &allow-other-keys)
