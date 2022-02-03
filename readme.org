@@ -79,8 +79,9 @@ The tests contain more useful examples.
 
 ** Configuration
 
-NFiles shines at configurability.  All configuration happens via subclassing of
-the =file= and =profile= classes together with method specialization.
+NFiles was designed with configurability in mind.  All configuration happens via
+subclassing of the =file= and =profile= classes together with method
+specialization.
 
 All configuration methods are specialized against =profile= and =file= so that
 the user can easily *compose* the behaviour:
@@ -102,6 +103,16 @@ The specialization methods are divided into the following:
 - =read-file= and =write-file=: This is how the file is read and written to
   disk.  These functions are responsible for calling the =deserialize= and
   =serialize= methods.
+
+** Platform support
+
+It's pure Common Lisp and all compilers plus all operating systems should be
+supported.
+
+Some notes:
+
+- All compilers but SBCL depend on [[https://github.com/sionescu/iolib][IOlib]] to preserve file attributes.
+- File attributes might not be preserved on Windows.
 
 ** Roadmap
 
