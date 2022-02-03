@@ -7,7 +7,7 @@ particular user-centric files like configuration files.
 
 - Performance:
   - Data is not persisted to disk if it does not need to.
-  - Files are read only once.
+  - Files are read only once (unless modified externally).
 - Extensibility:
   Persist any data structure the way you want it.
 - Reliability: no corruption and no data loss should occur.
@@ -23,9 +23,6 @@ particular user-centric files like configuration files.
 - Profile support.
 - On read error, existing files are backed up.
 - On write error, no file is written to disk, the existing file is preserved.
-
-# TODO: On-the-fly compression?  Users should prefer compression at the level of
-# the file system.
 
 ** Motivation
 
@@ -43,15 +40,15 @@ Consider this:
 
 Now if I ship this image to my friend Kaboom, =*foo-path*= will expand to
 
-#+begin_quote
-#P"/home/johndoe/.config/
-#+end_quote
+#+begin_src lisp
+#P"/home/johndoe/.config/"
+#+end_src
 
 on their machine instead of the expected
 
-#+begin_quote
+#+begin_src lisp
 #P"/home/kaboom/.config/"
-#+end_quote
+#+end_src
 
 ** Examples
 
@@ -112,6 +109,9 @@ The specialization methods are divided into the following:
 - Support OS-level locks (à-la Emacs / LibreOffice).
 - Improve portability, in particular preservation of file attributes may not
   work on Windows.
+- Compressing =write-file= and =read-file= (for instance with zstd / lz).  But
+  is it such a good idea?  Users should prefer compression at the level of the
+  file system.
 
 ** History
 
