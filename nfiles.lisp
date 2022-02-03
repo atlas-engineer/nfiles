@@ -287,8 +287,9 @@ See `read-file' for the reverse action."))
 
 (defmethod write-file :around ((profile profile) (file file) &key)
   (unless (nil-pathname-p (expand file))
-    (call-next-method)
     (let ((entry (cache-entry file)))
+      ;; It's important to fetch the entry before we write to avoid a cache miss.
+      (call-next-method)
       (sera:synchronized (entry)
         (setf (last-update entry) (get-universal-time))))))
 
@@ -398,7 +399,7 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
     :documentation "This is the `file' object that was used to instantiate the
 entry's `cached-value'. ")
    (last-update
-    0
+    (get-universal-time)
     :type integer
     :documentation "The date at which the cache entry was last updated.")
    (cached-value                        ; TODO: Rename to `content'?
@@ -436,8 +437,9 @@ entry's `cached-value'. ")
                (or force-read
                    (and (reload-on-change-p file)
                         (alex:when-let ((entry (gethash key *cache*)))
-                          (< (last-update entry) (or (uiop:safe-file-write-date path)
-                                                     0))))))
+                          (sera:synchronized (entry)
+                            (< (last-update entry) (or (uiop:safe-file-write-date path)
+                                                       0)))))))
           (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file))
           (alex:ensure-gethash key
                                *cache*
