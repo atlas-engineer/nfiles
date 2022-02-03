@@ -381,6 +381,10 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
     :type file
     :documentation "This is the `file' object that was used to instantiate the
 entry's `cached-value'. ")
+   (last-update
+    0
+    :type integer
+    :documentation "The write date of the file the last time the cache was updated.")
    (cached-value                        ; TODO: Rename to `content'?
     nil
     :type t)
@@ -394,8 +398,10 @@ entry's `cached-value'. ")
 
 (defmethod initialize-instance :after ((entry cache-entry) &key)
   (setf (cached-value entry)
-        (when (uiop:file-exists-p (expand (source-file entry)))
-          (read-file (profile (source-file entry)) (source-file entry)))))
+        (let ((path (expand (source-file entry))))
+          (when (uiop:file-exists-p path)
+            (prog1 (read-file (profile (source-file entry)) (source-file entry))
+              (setf (last-update entry) (file-write-date path)))))))
 
 (defvar *cache* (sera:dict)
   "Internal `*cache*' associating expanded paths with a dedicated `cache-entry'.")
@@ -406,11 +412,15 @@ entry's `cached-value'. ")
 (defun cache-entry (file &optional force-read)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
-    (let ((key (let ((path (expand file)))
-                 (if (nil-pathname-p path)
-                     file
-                     (uiop:native-namestring path)))))
-      (if force-read
+    (let* ((path (expand file))
+           (key (if (nil-pathname-p path)
+                    file
+                    (uiop:native-namestring path))))
+      (if (and (not (nil-pathname-p path))
+               (or force-read
+                   (alex:when-let ((entry (gethash key *cache*)))
+                     (< (last-update entry) (or (uiop:safe-file-write-date path)
+                                                0)))))
           (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file))
           (alex:ensure-gethash key
                                *cache*

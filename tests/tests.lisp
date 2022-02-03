@@ -114,11 +114,17 @@
         nil)))
 
 (nfile-test "Cache"
-  (let ((file1 (make-instance 'nfiles:file :base-path "baz"))
-        (file2 (make-instance 'nfiles:file :base-path "baz"))
-        (test-content "Cache test"))
-    (setf (nfiles:content file1) test-content)
-    (is (nfiles:content file2) test-content)))
+  (let ((file1 (make-instance 'nfiles:file :base-path "foo"))
+        (file2 (make-instance 'nfiles:file :base-path "foo"))
+        (test-content "Hello world!")
+        (test-content2 "Hello altered world!"))
+    (bt:join-thread (setf (nfiles:content file1) test-content))
+    (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
+                                       :if-exists :supersede)
+    (is (nfiles:content file1)
+        test-content2)
+    (is (nfiles:content file2)
+        test-content2)))
 
 (nfile-test "Cache invalidation"
   (let ((file1 (make-instance 'nfiles:file :base-path "foo"))
@@ -128,6 +134,10 @@
     (bt:join-thread (setf (nfiles:content file1) test-content))
     (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
                                        :if-exists :supersede)
+    ;; Hack the cache to make it out-of-date.
+    (setf (nfiles::last-update (gethash (uiop:native-namestring (nfiles:expand file2))
+                                        nfiles::*cache*))
+          (get-universal-time))
     (is (nfiles:content file2)
         test-content)
     (is (nfiles:content file2 :force-read)
