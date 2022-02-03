@@ -120,6 +120,21 @@
     (setf (nfiles:content file1) test-content)
     (is (nfiles:content file2) test-content)))
 
+(nfile-test "Cache invalidation"
+  (let ((file1 (make-instance 'nfiles:file :base-path "foo"))
+        (file2 (make-instance 'nfiles:file :base-path "foo"))
+        (test-content "Hello world!")
+        (test-content2 "Hello altered world!"))
+    (bt:join-thread (setf (nfiles:content file1) test-content))
+    (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
+                                       :if-exists :supersede)
+    (is (nfiles:content file2)
+        test-content)
+    (is (nfiles:content file2 :force-read)
+        test-content2)
+    (is (nfiles:content file1)
+        test-content2)))
+
 (nfile-test "Backup"
   (let ((corrupted-path "corrupt.lisp"))
     (alexandria:write-string-into-file "(" corrupted-path)

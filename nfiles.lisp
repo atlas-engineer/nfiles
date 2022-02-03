@@ -3,7 +3,6 @@
 
 (in-package :nfiles)
 
-;; TODO: Test with CCL.
 ;; TODO: Handle write errors (e.g. when trying to write to /root).
 
 (defclass* profile ()
@@ -178,7 +177,7 @@ removed.")
 (defgeneric resolve (profile file)
   (:method ((profile profile) (file file))
     (base-path file))
-  (:documentation "Return the final expanded path foe `file' depending on its `profile'.
+  (:documentation "Return the final expanded path for `file' depending on its `profile'.
 This method is meant to be specialized against the user-defined `profile's and `file's.
 See `expand' for a convenience wrapper."))
 
@@ -212,11 +211,6 @@ See `expand' for a convenience wrapper."))
 
 (defmethod resolve ((profile profile) (file data-file))
   (maybe-xdg #'uiop:xdg-data-home (call-next-method)))
-
-;; TODO: Does it make sense to serialize / deserialize over a profile?
-;; Yes, because this is where we chose to not touch the filesystem, or to be read-only.
-;; Now that we have `read' and `write', maybe not so much.
-;; But who knows... Plus for consistency with other methods, we can keep the same parameters.
 
 (export-always 'deserialize)
 (defgeneric deserialize (profile file raw-content &key &allow-other-keys)
@@ -378,9 +372,7 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
 
 ;; We need a cache system to avoid reading a file that's already in memory (from
 ;; another data file).
-
 ;; We also don't want to needlessly duplicate the content in memory.
-
 ;; TODO: How do we garbage collect cache entries?  We can call `clear-cache'.
 
 (defclass* cache-entry ()                ; TODO: Rename?
@@ -411,20 +403,29 @@ entry's `cached-value'. ")
 (defun clear-cache ()                  ; TODO: Export?
   (clrhash *cache*))
 
-(defun cache-entry (file)
+(defun cache-entry (file &optional force-read)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
-    (alex:ensure-gethash (let ((path (expand file)))
-                           (if (nil-pathname-p path)
-                               file
-                               path))
-                         *cache*
-                         (make-instance 'cache-entry :source-file file))))
+    (let ((key (let ((path (expand file)))
+                 (if (nil-pathname-p path)
+                     file
+                     (uiop:native-namestring path)))))
+      (if force-read
+          (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file))
+          (alex:ensure-gethash key
+                               *cache*
+                               (make-instance 'cache-entry :source-file file))))))
 
 (export-always 'content)
-(defmethod content ((file file))
-  "Return the content of FILE."
-  (let ((entry (cache-entry file)))
+(defgeneric content (file &optional force-read)
+  (:documentation "Get and set the content of the file.
+This generic function is not meant to be specialized.
+See `serialize', `deserialize', `write-file' and `read-file' instead."))
+
+(defmethod content ((file file) &optional force-read)
+  "Return the content of FILE.
+When FORCE-READ is non-nil, the cache is skipped and the file is re-read."
+  (let ((entry (cache-entry file force-read)))
     (sera:synchronized (entry)
       (cached-value entry))))
 
