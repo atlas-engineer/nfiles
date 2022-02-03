@@ -13,6 +13,16 @@
   (the (values boolean &optional)
        (uiop:pathname-equal pathname uiop:*nil-pathname*)))
 
+(export-always 'empty-pathname-p)
+(-> empty-pathname-p (t) boolean)
+(defun empty-pathname-p (p)
+  "Return non-nil if PATHNAME is `uiop:*nil-pathname*', \"\" or NIL."
+  (the (values boolean &optional)
+       (or
+        (null p)
+        (equal p "")
+        (uiop:pathname-equal p uiop:*nil-pathname*))))
+
 (export-always 'pathname-type*)
 (defun pathname-type* (pathname)
   "Like `pathname-type' but return NIL instead of \"\" or :UNSPECIFIC."
