@@ -140,7 +140,7 @@
           (get-universal-time))
     (is (nfiles:content file2)
         test-content)
-    (is (nfiles:content file2 :force-read)
+    (is (nfiles:content file2 :force-read t)
         test-content2)
     (is (nfiles:content file1)
         test-content2)))

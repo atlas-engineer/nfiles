@@ -85,7 +85,12 @@ The profile is only set at instantiation time.")
    (name
     ""
     :type string
-    :documentation "Name used to identify the object in a human-readable manner."))
+    :documentation "Name used to identify the object in a human-readable manner.")
+   (reload-on-change-p
+    t
+    :type boolean
+    :documentation "Whether to automatically reload the file if it was modified
+since it was last loaded."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
@@ -429,17 +434,18 @@ entry's `cached-value'. ")
                     (uiop:native-namestring path))))
       (if (and (not (nil-pathname-p path))
                (or force-read
-                   (alex:when-let ((entry (gethash key *cache*)))
-                     (< (last-update entry) (or (uiop:safe-file-write-date path)
-                                                0)))))
+                   (and (reload-on-change-p file)
+                        (alex:when-let ((entry (gethash key *cache*)))
+                          (< (last-update entry) (or (uiop:safe-file-write-date path)
+                                                     0))))))
           (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file))
           (alex:ensure-gethash key
                                *cache*
                                (make-instance 'cache-entry :source-file file))))))
 
 (export-always 'content)
-(-> content (file &optional boolean) t)
-(defun content (file &optional force-read)
+(-> content (file &key (:force-read boolean)) t)
+(defun content (file &key force-read)
   "Return the content of FILE.
 When FORCE-READ is non-nil, the cache is skipped and the file is re-read."
   (let ((entry (cache-entry file force-read)))
