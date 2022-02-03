@@ -113,12 +113,13 @@
     (is (nfiles:content file)
         nil)))
 
-(nfile-test "Cache"
+(nfile-test "Cache auto-load"
   (let ((file1 (make-instance 'nfiles:file :base-path "foo"))
         (file2 (make-instance 'nfiles:file :base-path "foo"))
         (test-content "Hello world!")
         (test-content2 "Hello altered world!"))
     (bt:join-thread (setf (nfiles:content file1) test-content))
+    (sleep 1) ; Need to sleep 1s because time resolution is to the second.
     (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
                                        :if-exists :supersede)
     (is (nfiles:content file1)
@@ -134,7 +135,7 @@
     (bt:join-thread (setf (nfiles:content file1) test-content))
     (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
                                        :if-exists :supersede)
-    ;; Hack the cache to make it out-of-date.
+    ;; Hack the cache to make it artificially more  up-to-date than it really is.
     (setf (nfiles::last-update (gethash (uiop:native-namestring (nfiles:expand file2))
                                         nfiles::*cache*))
           (get-universal-time))
