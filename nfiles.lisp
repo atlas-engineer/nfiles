@@ -435,12 +435,8 @@ entry's `cached-value'. ")
                                (make-instance 'cache-entry :source-file file))))))
 
 (export-always 'content)
-(defgeneric content (file &optional force-read)
-  (:documentation "Get and set the content of the file.
-This generic function is not meant to be specialized.
-See `serialize', `deserialize', `write-file' and `read-file' instead."))
-
-(defmethod content ((file file) &optional force-read)
+(-> content (file &optional boolean) t)
+(defun content (file &optional force-read)
   "Return the content of FILE.
 When FORCE-READ is non-nil, the cache is skipped and the file is re-read."
   (let ((entry (cache-entry file force-read)))
@@ -479,7 +475,8 @@ Return the number of decrements, or NIL if there was none."
                         (worker cache-entry) nil))))))
       (maybe-write))))
 
-(defmethod (setf content) (value (file file))
+(-> (setf content) (t file) t)
+(defun (setf content) (value file)
   "Set FILE content to VALUE and persist change to disk.
 While the content of the FILE object is updated instantly, the file is persisted
 in the background.
