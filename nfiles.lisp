@@ -282,7 +282,10 @@ See `read-file' for the reverse action."))
 
 (defmethod write-file :around ((profile profile) (file file) &key)
   (unless (nil-pathname-p (expand file))
-    (call-next-method)))
+    (call-next-method)
+    (let ((entry (cache-entry file)))
+      (sera:synchronized (entry)
+        (setf (last-update entry) (get-universal-time))))))
 
 (defmethod write-file ((profile profile) (file file) &key)
   "Write the result of `serialize' to the `file' path."
@@ -392,7 +395,7 @@ entry's `cached-value'. ")
    (last-update
     0
     :type integer
-    :documentation "The write date of the file the last time the cache was updated.")
+    :documentation "The date at which the cache entry was last updated.")
    (cached-value                        ; TODO: Rename to `content'?
     nil
     :type t)
@@ -409,7 +412,7 @@ entry's `cached-value'. ")
         (let ((path (expand (source-file entry))))
           (when (uiop:file-exists-p path)
             (prog1 (read-file (profile (source-file entry)) (source-file entry))
-              (setf (last-update entry) (file-write-date path)))))))
+              (setf (last-update entry) (get-universal-time)))))))
 
 (defvar *cache* (sera:dict)
   "Internal `*cache*' associating expanded paths with a dedicated `cache-entry'.")
