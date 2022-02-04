@@ -64,13 +64,13 @@ removed.")
 
 (defclass* file ()
   ((base-path
-    #p""
+    #p"."
     :type pathname
     :export t
     :initarg nil
     :reader t
     :writer nil
-    :documentation "")
+    :documentation "The pathname used by the `resolve' method to yield the final path.")
    (profile
     *default-profile*
     :type profile
@@ -213,8 +213,11 @@ See `expand' for a convenience wrapper."))
 
 (defmethod resolve :around ((profile profile) (file file))
   "Clean up the result before returning it."
-  (uiop:ensure-pathname (call-next-method)
-                        :truenamize t))
+  (let ((path (call-next-method)))
+    (if (nil-pathname-p path)
+        path
+        (uiop:ensure-pathname path
+                              :truenamize t))))
 
 (defmethod resolve ((profile profile) (file lisp-file))
   (make-pathname :defaults (call-next-method) :type "lisp"))
