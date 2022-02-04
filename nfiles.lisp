@@ -3,8 +3,6 @@
 
 (in-package :nfiles)
 
-;; TODO: Handle write errors (e.g. when trying to write to /root).
-
 (defclass* profile ()
   ((name "default"
          :type string
@@ -90,7 +88,19 @@ The profile is only set at instantiation time.")
     'ask
     :type (member ask reload overwrite)
     :documentation "Whether to reload or overwrite the file if it was modified
-since it was last loaded."))
+since it was last loaded.")
+   (on-deserialization-error
+    'ask
+    :type (member ask backup delete)
+    :documentation "What to do on deserialization error.
+The offending file may be backed up with the `backup' function.
+Or it may simply be deleted.
+`ask' leaves the condition is unhandled, so unless you handle it it will prompt the debugger with the other options.")
+   (on-read-error
+    'ask
+    :type (member ask backup delete)
+    :documentation "What to do on file read error.
+See `on-deserialization-error' for the meaning of the different actions."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
@@ -101,6 +111,7 @@ See `resolve', `serialize', `etc'.
 The `name' slot can be used to refer to `file' objects in a human-readable fashion."))
 
 (export-always '(ask reload overwrite))
+(export-always '(ask backup delete))
 
 (defclass* lisp-file (file)
   ()
@@ -234,6 +245,13 @@ See `expand' for a convenience wrapper."))
 (defmethod resolve ((profile profile) (file runtime-file))
   (maybe-xdg #'uiop:xdg-runtime-dir (call-next-method)))
 
+(defun auto-restarter (restart)
+  "Call RESTART if valid."
+  (lambda (c)
+    (declare (ignore c))
+    (alex:when-let ((restart (find-restart restart)))
+      (invoke-restart restart))))
+
 (export-always 'deserialize)
 (defgeneric deserialize (profile file stream &key &allow-other-keys)
   (:method ((profile profile) (file file) stream &key)
@@ -243,13 +261,16 @@ ready to be manipulated on the Lisp side.
 See `serialize' for the reverse action."))
 
 (defmethod deserialize :around ((profile profile) (file file) stream &key)
-  "Don't try deserialize if there is no file."
+  "Don't try deserialize if there is no file.
+Handle errors gracefully.  See `on-deserialization-error'."
   (declare (ignore stream))
-  (unless (nil-pathname-p (expand file))
-    (let ((result (call-next-method)))
-      (if (streamp result)
-          (alex:read-stream-content-into-string result)
-          result))))
+  (let ((path (expand file)))
+    (unless (nil-pathname-p path)
+      (handler-bind ((error (auto-restarter (on-deserialization-error file))))
+        (let ((result (call-next-method)))
+          (if (streamp result)
+              (alex:read-stream-content-into-string result)
+              result))))))
 
 (defmethod deserialize ((profile profile) (file lisp-file) stream &key)
   (declare (ignore stream))
@@ -263,7 +284,6 @@ See `serialize' for the reverse action."))
   (declare (ignore stream))
   nil)
 
-;; TODO: Can serialization methods be compounded?
 (export-always 'serialize)
 (defgeneric serialize (profile file stream &key &allow-other-keys)
   (:method ((profile profile) (file file) stream &key)
@@ -339,6 +359,8 @@ See `*gpg-default-recipient*'."
   nil)
 
 (defun backup (path)
+  "Rename PATH to a file of the same name with a unique suffix appended.
+The file is guaranteed to not conflict with any existing file."
   (let* ((path (uiop:ensure-pathname path :truename t))
          (temp-path
            (uiop:with-temporary-file (:prefix (uiop:strcat (pathname-name path) "-backup-")
@@ -348,7 +370,8 @@ See `*gpg-default-recipient*'."
                                       :keep t
                                       :pathname temp-path)
              temp-path)))
-    (uiop:rename-file-overwriting-target path temp-path)))
+    (uiop:rename-file-overwriting-target path temp-path)
+    temp-path))
 
 (export-always 'read-file)
 (defgeneric read-file (profile file &key &allow-other-keys)
@@ -356,17 +379,18 @@ See `*gpg-default-recipient*'."
 See `write-file' for the reverse action."))
 
 (defmethod read-file :around ((profile profile) (file file) &key)
-  "Don't try to load the file if its expanded path is nil.
-Close the FILE stream when `deserialize' is done.
-On failure, create a backup of the file."
-  (unless (nil-pathname-p (expand file))
-    (let ((path (expand file)))
-      (when (uiop:file-exists-p path)
-        (handler-case (call-next-method)
-          (t ()
-            ;; TODO: Add (optional) restart?
-            (backup path)
-            nil))))))
+  "Don't try to load the file if it does not exist."
+  (let ((path (expand file)))
+    (when (uiop:file-exists-p path)
+      (restart-case (handler-bind ((error (auto-restarter (on-read-error file))))
+                      (call-next-method))
+        (backup ()
+          (backup path)
+          ;; Return `nil' so that `content' also returns `nil' on error.
+          nil)
+        (delete ()
+          (uiop:delete-file-if-exists path)
+          nil)))))
 
 (defmethod read-file ((profile profile) (file file) &key)
   "Open FILE and call `deserialize' on its content."
@@ -435,11 +459,6 @@ entry's `cached-value'. ")
 (defun clear-cache ()                  ; TODO: Export?
   (clrhash *cache*))
 
-(defun auto-restart (c)
-  "Call the `restart' slot of C."
-  (alex:when-let ((restart (find-restart (slot-value c 'restart))))
-    (invoke-restart restart)))
-
 (defun cache-entry (file &optional force-read)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
@@ -450,13 +469,12 @@ entry's `cached-value'. ")
       (if (and (not (nil-pathname-p path))
                (or force-read
                    (alex:when-let ((entry (gethash key *cache*)))
-                     (restart-case (handler-bind ((external-modification #'auto-restart))
+                     (restart-case (handler-bind ((external-modification (auto-restarter (on-external-modification file))))
                                      (sera:synchronized (entry)
                                        (when (< (last-update entry) (or (uiop:safe-file-write-date path)
                                                                         0))
                                          (error 'external-modification
-                                                :path path
-                                                :restart (on-external-modification file)))))
+                                                :path path))))
                        (reload ()
                          t)
                        (overwrite ()

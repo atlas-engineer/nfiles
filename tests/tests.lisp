@@ -235,10 +235,23 @@
     (is (nfiles:content file) (format nil "~a: ~a" test-content (1- limit)))))
 
 
-(nfile-test "Backup"
+(nfile-test "Deserialization error"
   (let ((corrupted-path "corrupt.lisp"))
     (alexandria:write-string-into-file "(" corrupted-path)
     (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt")))
+      (is-error (nfiles:content corrupted-file)
+                error)
+      (ok (uiop:file-exists-p (nfiles:expand corrupted-file)))
+      (setf (nfiles:on-deserialization-error corrupted-file) 'nfiles:delete)
+      (nfiles:content corrupted-file)
+      (is (uiop:file-exists-p (nfiles:expand corrupted-file))
+          nil))))
+
+(nfile-test "Backup"
+  (let ((corrupted-path "corrupt.lisp"))
+    (alexandria:write-string-into-file "(" corrupted-path)
+    (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt"
+                                         :on-deserialization-error 'nfiles:backup)))
       (is (nfiles:content corrupted-file) nil)
       (ok (find-if (lambda (filename) (search "-backup" filename))
                    (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
@@ -265,7 +278,8 @@
     (ok (uiop:file-exists-p "corrupt.lisp.gpg"))
     ;; Clear the cache so that next file tries reading the corrupted file.
     (nfiles::clear-cache)
-    (let ((corrupted-lisp-file (make-instance 'nfiles:gpg-lisp-file :base-path #p"corrupt.lisp")))
+    (let ((corrupted-lisp-file (make-instance 'nfiles:gpg-lisp-file :base-path #p"corrupt.lisp"
+                                              :on-read-error 'nfiles:backup)))
       (is (nfiles:expand corrupted-lisp-file) (uiop:ensure-pathname "corrupt.lisp.gpg" :truenamize t))
       (is (nfiles:content corrupted-lisp-file) nil)
       (ok (find-if (lambda (filename) (search "-backup" filename))

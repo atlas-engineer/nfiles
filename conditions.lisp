@@ -5,7 +5,6 @@
 
 (export-always 'external-modification)
 (define-condition external-modification (error)
-  ((path :initarg :path)
-   (restart :initarg :restart))
+  ((path :initarg :path))
   (:report (lambda (c stream)
              (format stream "External modification on file ~s." (slot-value c 'path)))))
