@@ -135,6 +135,13 @@ not provided."))
 specified recipient key.
 The '.gpg' extension is automatically added if missing."))
 
+(defclass* gpg-lisp-file (gpg-file lisp-file)
+    ()
+    (:export-class-name-p t)
+    (:documentation "The file is automatically crypted and decrypted using the
+specified recipient key.
+The '.lisp.gpg' extension is automatically added if missing."))
+
 (defclass* read-only-file (file)
     ()
     (:export-class-name-p t)

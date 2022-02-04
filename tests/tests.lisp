@@ -218,14 +218,6 @@
     (is (nfiles:content file1)
         test-content2)))
 
-(nfile-test "Backup"
-  (let ((corrupted-path "corrupt.lisp"))
-    (alexandria:write-string-into-file "(" corrupted-path)
-    (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt")))
-      (is (nfiles:content corrupted-file) nil)
-      (ok (find-if (lambda (filename) (search "-backup" filename))
-                   (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
-
 (nfile-test "Skip useless writes"
   (let ((file (make-instance 'counter-file :base-path #p"qux"))
         (test-content "Skip test")
@@ -242,6 +234,15 @@
     (is (write-count file) 2)
     (is (nfiles:content file) (format nil "~a: ~a" test-content (1- limit)))))
 
+
+(nfile-test "Backup"
+  (let ((corrupted-path "corrupt.lisp"))
+    (alexandria:write-string-into-file "(" corrupted-path)
+    (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt")))
+      (is (nfiles:content corrupted-file) nil)
+      (ok (find-if (lambda (filename) (search "-backup" filename))
+                   (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
+
 (nfile-test "GPG test"
   (let ((file (make-instance 'nfiles:gpg-file :base-path #p"fog"))
         (test-content "Cryptic world")
@@ -257,5 +258,17 @@
     (nfiles::clear-cache)
     (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path #p"fog")))
       (is (nfiles:content synonym-file) test-content))))
+
+(nfile-test "GPG Backup"
+  (let ((corrupted-file (make-instance 'nfiles:gpg-file :base-path #p"corrupt.lisp")))
+    (bt:join-thread (setf (nfiles:content corrupted-file) "("))
+    (ok (uiop:file-exists-p "corrupt.lisp.gpg"))
+    ;; Clear the cache so that next file tries reading the corrupted file.
+    (nfiles::clear-cache)
+    (let ((corrupted-lisp-file (make-instance 'nfiles:gpg-lisp-file :base-path #p"corrupt.lisp")))
+      (is (nfiles:expand corrupted-lisp-file) (uiop:ensure-pathname "corrupt.lisp.gpg" :truenamize t))
+      (is (nfiles:content corrupted-lisp-file) nil)
+      (ok (find-if (lambda (filename) (search "-backup" filename))
+                   (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
 (finalize)
