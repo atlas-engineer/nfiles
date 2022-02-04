@@ -16,14 +16,6 @@ Subclass this profile to make your own, possibly carrying more data.
 `file' path expansion is specialized against its `profile' slot throught the
 `resolve' method."))
 
-(defvar *profile-index* (tg:make-weak-hash-table :weakness :key :test 'equal) ; TODO: Remove.
-  "Set of all `profile's objects.
-It's a weak hash table to that garbage-collected nfiles are automatically
-removed.")
-
-(defmethod initialize-instance :after ((profile profile) &key)
-  (setf (gethash profile *profile-index*) profile))
-
 (defclass* read-only-profile (profile)
   ()
   (:export-class-name-p t)
@@ -33,31 +25,6 @@ removed.")
     ()
     (:export-class-name-p t)
     (:documentation "In this profile, files are neither read nor written to by default."))
-
-(-> find-profile ((or null string)) (or null profile))
-(export-always 'find-profile)
-(defun find-profile (name)
-  "Return first `profile' object matching NAME."
-  (when name
-    (loop for profile being the hash-key of *profile-index*
-          when (string= name (name profile))
-            return profile)))
-
-(export-always 'all-profiles)
-(defun all-profiles (&rest packages)
-  (flet ((ensure-package (designator)   ; TODO: Factor this.
-           (if (packagep designator)
-               designator
-               (find-package designator))))
-    (let ((result '())
-          (packages (mapcar #'ensure-package packages)))
-      (maphash (lambda (file value)
-                 (declare (ignore value))
-                 (when (or (not packages)
-                           (find (sera:class-name-of file) packages))
-                   (push file result)))
-               *profile-index*)
-      result)))
 
 (export-always '*default-profile*)
 (defvar *default-profile* (make-instance 'profile))
@@ -196,12 +163,6 @@ removed.")
   (when base-path
     (setf (slot-value file 'base-path) (uiop:ensure-pathname base-path)))
   (setf (gethash file *index*) file))
-
-;; TODO: Useless?
-;; (defmethod find-file ((name string))
-;;   (loop for profile being the hash-key of *profile-index*
-;;         when (string= name (name profile))
-;;           return profile))
 
 (export-always 'resolve)
 (defgeneric resolve (profile file)
