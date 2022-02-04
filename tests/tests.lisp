@@ -22,19 +22,19 @@
        (uiop:delete-directory-tree *test-dir* :validate t))))
 
 (nfile-test "Simple path check"
-  (let ((file (make-instance 'nfiles:file :base-path "foo")))
+  (let ((file (make-instance 'nfiles:file :base-path #p"foo")))
     (is (nfiles:expand file)
         (uiop:merge-pathnames* "foo" *test-dir*)
         :test 'uiop:pathname-equal)))
 
 (nfile-test "Special character support"
-  (let ((file (make-instance 'nfiles:file :base-path "[")))
+  (let ((file (make-instance 'nfiles:file :base-path "["))) ; REVIEW: OK to use string here?
     (is (nfiles:expand file)
         (uiop:merge-pathnames* #p"\\[" *test-dir*)
         :test 'uiop:pathname-equal)))
 
 (nfile-test "Current dir change"
-  (let* ((file (make-instance 'nfiles:file :base-path "foo"))
+  (let* ((file (make-instance 'nfiles:file :base-path #p"foo"))
          (old-path (nfiles:expand file)))
     (uiop:with-current-directory ((uiop:temporary-directory))
       (isnt (nfiles:expand file) old-path))))
@@ -50,12 +50,12 @@
     ())
 
 (nfile-test "Application config file"
-  (let ((file (make-instance 'myapp-config-file :base-path "init")))
+  (let ((file (make-instance 'myapp-config-file :base-path #p"init")))
     (is (nfiles:expand file)
         (uiop:xdg-config-home "myapp/init.lisp"))))
 
 (nfile-test "Read-only file"
-  (let ((file (make-instance 'nfiles:read-only-file :base-path "should-not-exist")))
+  (let ((file (make-instance 'nfiles:read-only-file :base-path #p"should-not-exist")))
     (setf (nfiles:content file) "foo")
     (is (nfiles:expand file)
         (uiop:merge-pathnames* "should-not-exist" *test-dir*)
@@ -69,16 +69,16 @@
                                  "test-data"
                                  (asdf:system-source-directory (asdf:find-system :nfiles))))
 
-    (let ((file (make-instance 'nfiles:file :base-path "link-to-dummy")))
+    (let ((file (make-instance 'nfiles:file :base-path #p"link-to-dummy")))
       (is (nfiles:expand file)
           (uiop:ensure-pathname "dummy" :truenamize t))
       (let ((content (nfiles:content file)))
         (setf (nfiles:content file) content)
-        (is (nfiles:expand (make-instance 'nfiles:file :base-path "link-to-dummy"))
+        (is (nfiles:expand (make-instance 'nfiles:file :base-path #p"link-to-dummy"))
             (uiop:ensure-pathname "dummy" :truenamize t))))))
 
 (nfile-test "Simple write"
-  (let ((file (make-instance 'nfiles:file :base-path "foo"))
+  (let ((file (make-instance 'nfiles:file :base-path #p"foo"))
         (test-content "Hello world!"))
     (bt:join-thread (setf (nfiles:content file) test-content))
     (is (alexandria:read-file-into-string (nfiles:expand file))
@@ -87,14 +87,14 @@
         test-content)))
 
 (nfile-test "Parent creation"
-  (let ((file (make-instance 'nfiles:file :base-path "foo/bar"))
+  (let ((file (make-instance 'nfiles:file :base-path #p"foo/bar"))
         (test-content "Hello world!"))
     (bt:join-thread (setf (nfiles:content file) test-content))
     (is (alexandria:read-file-into-string (nfiles:expand file))
         test-content)))
 
 (nfile-test "Preserve attributes"
-  (let ((file (make-instance 'nfiles:file :base-path "private"))
+  (let ((file (make-instance 'nfiles:file :base-path #p"private"))
         (test-content "Hello world!")
         (new-content "Hello new world!"))
     (bt:join-thread (setf (nfiles:content file) test-content))
@@ -109,7 +109,7 @@
           permissions))))
 
 (nfile-test "Read non-existing file"
-  (let ((file (make-instance 'nfiles:file :base-path "bar")))
+  (let ((file (make-instance 'nfiles:file :base-path #p"bar")))
     (is (nfiles:content file)
         nil)))
 
@@ -131,8 +131,8 @@
   (call-next-method))
 
 (nfile-test "Cache"
-  (let ((file1 (make-instance 'counter-file :base-path "foo"))
-        (file2 (make-instance 'counter-file :base-path "bar"))
+  (let ((file1 (make-instance 'counter-file :base-path #p"foo"))
+        (file2 (make-instance 'counter-file :base-path #p"bar"))
         (test-content "Hello world!")
         (test-content2 "Hello new world!"))
 
@@ -160,8 +160,8 @@
     (is (write-count file2) 1)))
 
 (nfile-test "Cache external modification"
-  (let ((file1 (make-instance 'nfiles:file :base-path "foo"))
-        (file2 (make-instance 'nfiles:file :base-path "foo"))
+  (let ((file1 (make-instance 'nfiles:file :base-path #p"foo"))
+        (file2 (make-instance 'nfiles:file :base-path #p"foo"))
         (test-content "Hello world!")
         (test-content2 "Hello altered world!")
         (test-content3 "Hello imposing world!"))
@@ -200,8 +200,8 @@
         test-content3)))
 
 (nfile-test "Cache invalidation"
-  (let ((file1 (make-instance 'nfiles:file :base-path "foo"))
-        (file2 (make-instance 'nfiles:file :base-path "foo"))
+  (let ((file1 (make-instance 'nfiles:file :base-path #p"foo"))
+        (file2 (make-instance 'nfiles:file :base-path #p"foo"))
         (test-content "Hello world!")
         (test-content2 "Hello altered world!"))
     (bt:join-thread (setf (nfiles:content file1) test-content))
@@ -221,13 +221,13 @@
 (nfile-test "Backup"
   (let ((corrupted-path "corrupt.lisp"))
     (alexandria:write-string-into-file "(" corrupted-path)
-    (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path "corrupt")))
+    (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt")))
       (is (nfiles:content corrupted-file) nil)
       (ok (find-if (lambda (filename) (search "-backup" filename))
                    (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
 (nfile-test "Skip useless writes"
-  (let ((file (make-instance 'counter-file :base-path "qux"))
+  (let ((file (make-instance 'counter-file :base-path #p"qux"))
         (test-content "Skip test")
         (limit 5)
         (nfiles::*timeout* 1))
@@ -243,7 +243,7 @@
     (is (nfiles:content file) (format nil "~a: ~a" test-content (1- limit)))))
 
 (nfile-test "GPG test"
-  (let ((file (make-instance 'nfiles:gpg-file :base-path "fog"))
+  (let ((file (make-instance 'nfiles:gpg-file :base-path #p"fog"))
         (test-content "Cryptic world")
         (nfiles/gpg:*gpg-default-recipient* "mail@ambrevar.xyz"))
     (bt:join-thread (setf (nfiles:content file) test-content))
@@ -255,7 +255,7 @@
     (isnt (alexandria:read-file-into-string (nfiles:expand file))
           test-content)
     (nfiles::clear-cache)
-    (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path "fog")))
+    (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path #p"fog")))
       (is (nfiles:content synonym-file) test-content))))
 
 (finalize)
