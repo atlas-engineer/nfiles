@@ -69,7 +69,7 @@
             entries)))
 
 (defun gpg-recipient (file)             ; TODO: Find a proper way to do this.
-  "Return the key of FILE's recipient if any, `*gpg-recipient*' otherwise.
+  "Return the key of FILE's recipient if any, `*gpg-default-recipient*' otherwise.
 As second value the email.
 As third value the name."
   (let ((file (uiop:native-namestring file)))

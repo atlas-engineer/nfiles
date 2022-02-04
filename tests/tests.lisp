@@ -22,9 +22,9 @@
        (uiop:delete-directory-tree *test-dir* :validate t))))
 
 (defmacro nfile-gpg-test (name &body body)
-  `(if (uiop:getenv "NFILES_GPG_TESTS")
+  `(if *gpg-default-recipient*
        (nfile-test ,name (progn ,@body))
-       (warn "Skipping GPG tests, set the NFILES_GPG_TESTS environment variable to enable.")))
+       (warn "Skipping GPG tests, set the `*gpg-default-recipient*' to enable.")))
 
 (nfile-test "Simple path check"
   (let ((file (make-instance 'nfiles:file :base-path #p"foo")))
@@ -284,8 +284,7 @@
 
 (nfile-gpg-test "GPG test"
   (let ((file (make-instance 'nfiles:gpg-file :base-path #p"fog"))
-        (test-content "Cryptic world")
-        (nfiles/gpg:*gpg-default-recipient* "mail@ambrevar.xyz"))
+        (test-content "Cryptic world"))
     (bt:join-thread (setf (nfiles:content file) test-content))
     (ok (uiop:file-exists-p (nfiles:expand file)))
     #+sbcl
