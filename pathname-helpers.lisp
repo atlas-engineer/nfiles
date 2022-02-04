@@ -7,21 +7,12 @@
 ;; TODO: Define own `path-designator' type?
 
 (export-always 'nil-pathname-p)
-(-> nil-pathname-p (pathname-designator) boolean)
+(-> nil-pathname-p ((or null pathname-designator)) boolean)
 (defun nil-pathname-p (pathname)
-  "Return non-nil if PATHNAME is `uiop:*nil-pathname*'."
+  "Return non-nil if PATHNAME is `uiop:*nil-pathname*' or nil."
   (the (values boolean &optional)
-       (uiop:pathname-equal pathname uiop:*nil-pathname*)))
-
-(export-always 'empty-pathname-p)
-(-> empty-pathname-p (t) boolean)
-(defun empty-pathname-p (p)
-  "Return non-nil if PATHNAME is `uiop:*nil-pathname*', \"\" or NIL."
-  (the (values boolean &optional)
-       (or
-        (null p)
-        (equal p "")
-        (uiop:pathname-equal p uiop:*nil-pathname*))))
+       (or (null pathname)
+           (uiop:pathname-equal pathname uiop:*nil-pathname*))))
 
 (export-always 'pathname-type*)
 (defun pathname-type* (pathname)
