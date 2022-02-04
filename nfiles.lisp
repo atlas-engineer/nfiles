@@ -18,7 +18,7 @@ Subclass this profile to make your own, possibly carrying more data.
 `file' path expansion is specialized against its `profile' slot throught the
 `resolve' method."))
 
-(defvar *profile-index* (tg:make-weak-hash-table :weakness :key :test 'equal)
+(defvar *profile-index* (tg:make-weak-hash-table :weakness :key :test 'equal) ; TODO: Remove.
   "Set of all `profile's objects.
 It's a weak hash table to that garbage-collected nfiles are automatically
 removed.")
@@ -86,10 +86,10 @@ The profile is only set at instantiation time.")
     ""
     :type string
     :documentation "Name used to identify the object in a human-readable manner.")
-   (reload-on-change-p
-    t
-    :type boolean
-    :documentation "Whether to automatically reload the file if it was modified
+   (on-external-modification
+    'ask
+    :type (member ask reload overwrite)
+    :documentation "Whether to reload or overwrite the file if it was modified
 since it was last loaded."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
@@ -99,6 +99,8 @@ The `profile' slot can be used to drive the specializations of multiple `file' m
 See `resolve', `serialize', `etc'.
 
 The `name' slot can be used to refer to `file' objects in a human-readable fashion."))
+
+(export-always '(ask reload overwrite))
 
 (defclass* lisp-file (file)
   ()
@@ -426,6 +428,11 @@ entry's `cached-value'. ")
 (defun clear-cache ()                  ; TODO: Export?
   (clrhash *cache*))
 
+(defun auto-restart (c)
+  "Call the `restart' slot of C."
+  (alex:when-let ((restart (find-restart (slot-value c 'restart))))
+    (invoke-restart restart)))
+
 (defun cache-entry (file &optional force-read)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
@@ -435,11 +442,20 @@ entry's `cached-value'. ")
                     (uiop:native-namestring path))))
       (if (and (not (nil-pathname-p path))
                (or force-read
-                   (and (reload-on-change-p file)
-                        (alex:when-let ((entry (gethash key *cache*)))
-                          (sera:synchronized (entry)
-                            (< (last-update entry) (or (uiop:safe-file-write-date path)
-                                                       0)))))))
+                   (alex:when-let ((entry (gethash key *cache*)))
+                     (restart-case (handler-bind ((external-modification #'auto-restart))
+                                     (sera:synchronized (entry)
+                                       (when (< (last-update entry) (or (uiop:safe-file-write-date path)
+                                                                        0))
+                                         (error 'external-modification
+                                                :path path
+                                                :restart (on-external-modification file)))))
+                       (reload ()
+                         t)
+                       (overwrite ()
+                         (sera:synchronized (entry)
+                           (write-cache-entry file entry))
+                         nil)))))
           (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file))
           (alex:ensure-gethash key
                                *cache*
@@ -486,6 +502,17 @@ Return the number of decrements, or NIL if there was none."
                         (worker cache-entry) nil))))))
       (maybe-write))))
 
+(defun write-cache-entry (file entry)
+  (unless (worker-notifier entry)
+    (setf (worker-notifier entry) (bt:make-semaphore :name "NFiles notifier")))
+  (bt:signal-semaphore (worker-notifier entry))
+  (unless (worker entry)
+    (setf (worker entry)
+          (bt:make-thread (make-worker file entry)
+                          :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
+                          :name "NFiles worker")))
+  (worker entry))
+
 (-> (setf content) (t file) t)
 (defun (setf content) (value file)
   "Set FILE content to VALUE and persist change to disk.
@@ -497,15 +524,7 @@ writing the file."
   (let ((entry (cache-entry file)))
     (sera:synchronized (entry)
       (setf (cached-value entry) value)
-      (unless (worker-notifier entry)
-        (setf (worker-notifier entry) (bt:make-semaphore :name "NFiles notifier")))
-      (bt:signal-semaphore (worker-notifier entry))
-      (unless (worker entry)
-        (setf (worker entry)
-              (bt:make-thread (make-worker file entry)
-                              :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
-                              :name "NFiles worker")))
-      (worker entry))))
+      (write-cache-entry file entry))))
 
 (export-always 'with-file-content)
 (defmacro with-file-content ((content file &key default) &body body)

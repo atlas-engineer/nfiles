@@ -159,19 +159,45 @@
     (is (read-count file2) 1)
     (is (write-count file2) 1)))
 
-(nfile-test "Cache auto-load"
+(nfile-test "Cache external modification"
   (let ((file1 (make-instance 'nfiles:file :base-path "foo"))
         (file2 (make-instance 'nfiles:file :base-path "foo"))
         (test-content "Hello world!")
-        (test-content2 "Hello altered world!"))
+        (test-content2 "Hello altered world!")
+        (test-content3 "Hello imposing world!"))
     (bt:join-thread (setf (nfiles:content file1) test-content))
     (sleep 1)       ; Need to sleep 1s because time resolution is to the second.
     (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
                                        :if-exists :supersede)
+    (is-error (nfiles:content file1)
+              nfiles:external-modification)
+    (is-error (nfiles:content file1)
+              nfiles:external-modification)
+
+    (setf (nfiles:on-external-modification file1) 'nfiles:reload)
+    (setf (nfiles:on-external-modification file2) 'nfiles:reload)
     (is (nfiles:content file1)
         test-content2)
     (is (nfiles:content file2)
-        test-content2)))
+        test-content2)
+
+    (bt:join-thread (setf (nfiles:content file1) test-content3))
+    (sleep 1)       ; Need to sleep 1s because time resolution is to the second.
+    (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
+                                       :if-exists :supersede)
+    (setf (nfiles:on-external-modification file1) 'nfiles:overwrite)
+    (setf (nfiles:on-external-modification file2) 'nfiles:overwrite)
+
+    (is (nfiles:content file1)
+        test-content3)
+    (is (nfiles:content file2)
+        test-content3)
+
+    ;;  We wait until we are done writing, because we don't have access to the
+    ;;  thread.  TODO: Fix it?
+    (sleep 1)
+    (is (alexandria:read-file-into-string (nfiles:expand file1))
+        test-content3)))
 
 (nfile-test "Cache invalidation"
   (let ((file1 (make-instance 'nfiles:file :base-path "foo"))

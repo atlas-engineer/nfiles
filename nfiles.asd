@@ -17,6 +17,7 @@
                trivial-types)
   :components
   ((:file "package")
+   (:file "conditions")
    (:file "pathname-helpers")
    (:file "gpg")
    (:file "nfiles")))
