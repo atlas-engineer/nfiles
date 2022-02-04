@@ -285,4 +285,25 @@
       (ok (find-if (lambda (filename) (search "-backup" filename))
                    (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
+(defclass* nil-file (nfiles:virtual-file)
+    ())
+(defmethod nfiles:resolve ((profile nfiles:profile) (file nil-file))
+  #p"")
+
+(nfile-test "with-paths"
+  (let ((file1 (make-instance 'nfiles:file))
+        (file2 (make-instance 'nfiles:file :base-path "alt"))
+        (nil-file (make-instance 'nil-file)))
+    (is
+     (nfiles:with-paths ((path1 file1)
+                         (path2 file2))
+       (list path1 path2))
+     (list (nfiles:expand file1)
+           (nfiles:expand file2)))
+    (is
+     (nfiles:with-paths ((nil-path nil-file)
+                         (not-evaluated (make-instance 'nfiles:file :base-path (error "Should not reach here"))))
+       not-evaluated)
+     nil)))
+
 (finalize)

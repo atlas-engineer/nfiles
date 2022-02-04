@@ -435,7 +435,7 @@ entry's `cached-value'. ")
     (get-universal-time)
     :type integer
     :documentation "The date at which the cache entry was last updated.")
-   (cached-value                        ; TODO: Rename to `content'?
+   (cached-value
     nil
     :type t)
    (worker
@@ -550,6 +550,20 @@ writing the file."
     (sera:synchronized (entry)
       (setf (cached-value entry) value)
       (write-cache-entry file entry))))
+
+(export-always 'with-paths)
+(defmacro with-paths (bindings &body body)
+  "Bind let-style BINDINGS to `file' path expansions, then run BODY if all these
+paths or non-nil after `nil-pathname-p'."
+  (alex:with-gensyms (path)
+    `(sera:and-let* (,@(mapcar
+                        (lambda (binding)
+                          (let ((sym (first binding))
+                                (file (second binding)))
+                            (list sym `(let ((,path (nfiles:expand ,file)))
+                                         (unless (nil-pathname-p ,path) ,path)) )))
+                        bindings))
+       ,@body)))
 
 (export-always 'with-file-content)
 (defmacro with-file-content ((content file &key default) &body body)
