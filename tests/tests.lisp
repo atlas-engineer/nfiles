@@ -21,6 +21,11 @@
             ,@body)
        (uiop:delete-directory-tree *test-dir* :validate t))))
 
+(defmacro nfile-gpg-test (name &body body)
+  `(if (uiop:getenv "NFILES_GPG_TESTS")
+       (nfile-test ,name (progn ,@body))
+       (warn "Skipping GPG tests, set the NFILES_GPG_TESTS environment variable to enable.")))
+
 (nfile-test "Simple path check"
   (let ((file (make-instance 'nfiles:file :base-path #p"foo")))
     (is (nfiles:expand file)
@@ -256,35 +261,6 @@
       (ok (find-if (lambda (filename) (search "-backup" filename))
                    (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
-(nfile-test "GPG test"
-  (let ((file (make-instance 'nfiles:gpg-file :base-path #p"fog"))
-        (test-content "Cryptic world")
-        (nfiles/gpg:*gpg-default-recipient* "mail@ambrevar.xyz"))
-    (bt:join-thread (setf (nfiles:content file) test-content))
-    (ok (uiop:file-exists-p (nfiles:expand file)))
-    #+sbcl
-    (is-error (alexandria:read-file-into-string (nfiles:expand file))
-              'error)
-    #+ccl
-    (isnt (alexandria:read-file-into-string (nfiles:expand file))
-          test-content)
-    (nfiles::clear-cache)
-    (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path #p"fog")))
-      (is (nfiles:content synonym-file) test-content))))
-
-(nfile-test "GPG Backup"
-  (let ((corrupted-file (make-instance 'nfiles:gpg-file :base-path #p"corrupt.lisp")))
-    (bt:join-thread (setf (nfiles:content corrupted-file) "("))
-    (ok (uiop:file-exists-p "corrupt.lisp.gpg"))
-    ;; Clear the cache so that next file tries reading the corrupted file.
-    (nfiles::clear-cache)
-    (let ((corrupted-lisp-file (make-instance 'nfiles:gpg-lisp-file :base-path #p"corrupt.lisp"
-                                              :on-read-error 'nfiles:backup)))
-      (is (nfiles:expand corrupted-lisp-file) (uiop:ensure-pathname "corrupt.lisp.gpg" :truenamize t))
-      (is (nfiles:content corrupted-lisp-file) nil)
-      (ok (find-if (lambda (filename) (search "-backup" filename))
-                   (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
-
 (defclass* nil-file (nfiles:virtual-file)
     ())
 (defmethod nfiles:resolve ((profile nfiles:profile) (file nil-file))
@@ -305,5 +281,34 @@
                          (not-evaluated (make-instance 'nfiles:file :base-path (error "Should not reach here"))))
        not-evaluated)
      nil)))
+
+(nfile-gpg-test "GPG test"
+  (let ((file (make-instance 'nfiles:gpg-file :base-path #p"fog"))
+        (test-content "Cryptic world")
+        (nfiles/gpg:*gpg-default-recipient* "mail@ambrevar.xyz"))
+    (bt:join-thread (setf (nfiles:content file) test-content))
+    (ok (uiop:file-exists-p (nfiles:expand file)))
+    #+sbcl
+    (is-error (alexandria:read-file-into-string (nfiles:expand file))
+              'error)
+    #+ccl
+    (isnt (alexandria:read-file-into-string (nfiles:expand file))
+          test-content)
+    (nfiles::clear-cache)
+    (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path #p"fog")))
+      (is (nfiles:content synonym-file) test-content))))
+
+(nfile-gpg-test "GPG Backup"
+  (let ((corrupted-file (make-instance 'nfiles:gpg-file :base-path #p"corrupt.lisp")))
+    (bt:join-thread (setf (nfiles:content corrupted-file) "("))
+    (ok (uiop:file-exists-p "corrupt.lisp.gpg"))
+    ;; Clear the cache so that next file tries reading the corrupted file.
+    (nfiles::clear-cache)
+    (let ((corrupted-lisp-file (make-instance 'nfiles:gpg-lisp-file :base-path #p"corrupt.lisp"
+                                              :on-read-error 'nfiles:backup)))
+      (is (nfiles:expand corrupted-lisp-file) (uiop:ensure-pathname "corrupt.lisp.gpg" :truenamize t))
+      (is (nfiles:content corrupted-lisp-file) nil)
+      (ok (find-if (lambda (filename) (search "-backup" filename))
+                   (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
 (finalize)
