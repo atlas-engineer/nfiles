@@ -22,9 +22,9 @@
        (uiop:delete-directory-tree *test-dir* :validate t))))
 
 (defmacro nfile-gpg-test (name &body body)
-  `(if *gpg-default-recipient*
+  `(if nfiles/gpg:*gpg-default-recipient*
        (nfile-test ,name (progn ,@body))
-       (warn "Skipping GPG tests, set the `*gpg-default-recipient*' to enable.")))
+       (warn "Skipping GPG tests, set the `nfiles/gpg:*gpg-default-recipient*' to enable.")))
 
 (nfile-test "Simple path check"
   (let ((file (make-instance 'nfiles:file :base-path #p"foo")))
