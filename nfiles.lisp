@@ -159,9 +159,21 @@ removed.")
                *index*)
       result)))
 
+(defun expand-user-home (string)
+  (let* ((path (if (pathnamep string) string
+                   (uiop:parse-native-namestring string)))
+         (dir (pathname-directory path)))
+    (if (and (eq (first dir) :absolute)
+             (eq (second dir) :home))
+        (make-pathname :directory (append (pathname-directory (user-homedir-pathname))
+                                          (rest (rest dir)))
+                       :name (pathname-name path)
+                       :type (pathname-type path))
+        path)))
+
 (defmethod initialize-instance :after ((file file) &key base-path)
   (when base-path
-    (setf (slot-value file 'base-path) (uiop:ensure-pathname base-path)))
+    (setf (slot-value file 'base-path) (uiop:ensure-pathname (expand-user-home base-path))))
   (setf (gethash file *index*) file))
 
 (export-always 'resolve)
