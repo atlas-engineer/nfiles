@@ -94,17 +94,42 @@ As third value the name."
             *gpg-default-recipient*))
         *gpg-default-recipient*)))
 
+(defun read-new-value (prompt)
+  "PROMPT takes no trailing colon nor trailing space."
+  (format *query-io* "~a: " prompt)
+  (finish-output *query-io*)
+  (list (read *query-io*)))
+
+(defun run-program* (command &key input)
+  "Like `uiop:run-program' but raise a `nfiles:process-error' on error."
+  (multiple-value-bind (output error-output status)
+      (uiop:run-program
+       command
+       :output '(:string :stripped t)
+       :error-output '(:string :stripped t)
+       :ignore-error-status t
+       :input input)
+    (if (= 0 status)
+        output
+        (error 'nfiles:process-error :command command :message error-output))))
+
 (defun gpg-write (stream gpg-file &optional recipient)
   "Write STREAM to GPG-FILE using RECIPIENT key.
 If RECIPIENT is not provided, use default key."
   (let ((native-file (uiop:native-namestring gpg-file)))
-    (uiop:run-program
-     `(,*gpg-program* "--output" ,native-file
-                      ,@(if recipient
-                            `("--recipient" ,recipient)
-                            '("--default-recipient-self"))
-                      "--batch" "--yes" "--encrypt")
-     :input stream)))
+    (flet ((call-gpg (&optional recipient)
+             (run-program* `(,*gpg-program* "--output" ,native-file
+                                            ,@(if recipient
+                                                  `("--recipient" ,recipient)
+                                                  '("--default-recipient-self"))
+                                            "--batch" "--yes" "--encrypt")
+                           :input stream)))
+      (restart-case (call-gpg recipient)
+
+        (use-recipient (new-recipient)
+          :report "Set recipient for encryption (a string)"
+          :interactive (lambda () (read-new-value "Enter a new recipient (a string)"))
+          (call-gpg new-recipient))))))
 
 (defun call-with-gpg-file (gpg-file options fun)
   "Like `call-with-open-file' but use `gpg' to read and write to file.
@@ -114,10 +139,7 @@ nothing is done if file is missing."
   ;; TODO: Support all `open' options.
   (if (member (getf options :direction) '(:io :input nil))
       (when (uiop:file-exists-p gpg-file)
-        (let ((clear-data (with-output-to-string (out)
-                            (uiop:run-program
-                             (list *gpg-program* "--decrypt" (uiop:native-namestring gpg-file))
-                             :output out))))
+        (let ((clear-data (run-program* (list *gpg-program* "--decrypt" (uiop:native-namestring gpg-file)))))
           (with-input-from-string (stream clear-data)
             (prog1                ; TODO: Shouldn't we `unwind-protect' instead?
                 (funcall fun stream)
