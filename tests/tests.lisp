@@ -38,6 +38,16 @@
         (uiop:merge-pathnames* #p"\\[" *test-dir*)
         :test 'uiop:pathname-equal)))
 
+(nfile-test "Tilde = home directory"
+  (let ((file1 (make-instance 'nfiles:file :base-path "~/[foo")) ; REVIEW: OK to use string here?
+        (file2 (make-instance 'nfiles:file :base-path #p"~/\\[bar")))
+    (is (nfiles:expand file1)
+        (uiop:merge-pathnames* #p"\\[foo" (user-homedir-pathname))
+        :test 'uiop:pathname-equal)
+    (is (nfiles:expand file2)
+        (uiop:merge-pathnames* #p"\\[bar" (user-homedir-pathname))
+        :test 'uiop:pathname-equal)))
+
 (nfile-test "Current dir change"
   (let* ((file (make-instance 'nfiles:file :base-path #p"foo"))
          (old-path (nfiles:expand file)))
