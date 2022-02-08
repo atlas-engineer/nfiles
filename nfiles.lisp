@@ -92,24 +92,24 @@ not provided."))
   (:documentation "Like regular `file' but set directory to `uiop:xdg-config-home'."))
 
 (defclass* cache-file (file)
-    ()
-    (:export-class-name-p t)
-    (:documentation "Like regular `file' but set directory to `uiop:xdg-cache-home'"))
+  ()
+  (:export-class-name-p t)
+  (:documentation "Like regular `file' but set directory to `uiop:xdg-cache-home'"))
 
 (defclass* data-file (file)
-    ()
-    (:export-class-name-p t)
-    (:documentation "Like regular `file' but set directory to `uiop:xdg-data-home'"))
+  ()
+  (:export-class-name-p t)
+  (:documentation "Like regular `file' but set directory to `uiop:xdg-data-home'"))
 
 (defclass* runtime-file (file)
-    ()
-    (:export-class-name-p t)
-    (:documentation "Like regular `file' but set directory to `uiop:xdg-runtime-dir'"))
+  ()
+  (:export-class-name-p t)
+  (:documentation "Like regular `file' but set directory to `uiop:xdg-runtime-dir'"))
 
 (defclass* gpg-file (file)
-    ()
-    (:export-class-name-p t)
-    (:documentation "The file is automatically crypted and decrypted using the
+  ()
+  (:export-class-name-p t)
+  (:documentation "The file is automatically crypted and decrypted using the
 specified recipient key.
 The '.gpg' extension is automatically added if missing."))
 
