@@ -51,10 +51,16 @@ The profile is only set at instantiation time.")
     ""
     :type string
     :documentation "Name used to identify the object in a human-readable manner.")
-   (async-p
-    nil
-    :type boolean
-    :documentation "When non-nil, `read-file' is called in the background.")
+   (read-handler
+    #'identity
+    :type trivial-types:function-designator
+    :documentation "Function of one argument, the condition that may be raised
+in the reader thread.")
+   (write-handler
+    #'identity
+    :type trivial-types:function-designator
+    :documentation "Function of one argument, the condition that may be raised
+in the writer thread.")
    (on-external-modification
     'ask
     :type (member ask reload overwrite)
@@ -428,18 +434,20 @@ entry's `cached-value'. ")
     :type (or null bt:semaphore)))
   (:accessor-name-transformer (class*:make-name-transformer name)))
 
-(defmacro run-thread (name lambda)
-  `(bt:make-thread ,lambda
-                  :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
-                  :name ,name))
+(defmacro run-thread (name handler &body body)
+  `(bt:make-thread (lambda ()
+                     (restart-case
+                         (handler-bind ((t ,handler)) ,@body)
+                       (forward-condition (c)
+                         c)))
+                   :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
+                   :name ,name))
 
 (defmethod initialize-instance :after ((entry cache-entry) &key)
   (setf (cached-value entry)
-        (prog1 (flet ((read* ()
-                        (read-file (profile (source-file entry)) (source-file entry))))
-                 (if (async-p (source-file entry))
-                     (run-thread "NFiles reader" (lambda () (read*)))
-                     (read*)))
+        (prog1 (run-thread "NFiles reader"
+                 (read-handler (source-file entry))
+                 (read-file (profile (source-file entry)) (source-file entry)))
           (setf (last-update entry) (get-universal-time)))))
 
 (defvar *cache* (sera:dict)
@@ -448,13 +456,17 @@ entry's `cached-value'. ")
 (defun clear-cache ()                  ; TODO: Export?
   (clrhash *cache*))
 
+(defun file-key (file)
+  (let ((path (expand file)))
+    (if (nil-pathname-p path)
+        file
+        (uiop:native-namestring path))))
+
 (defun cache-entry (file &optional force-read)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
     (let* ((path (expand file))
-           (key (if (nil-pathname-p path)
-                    file
-                    (uiop:native-namestring path))))
+           (key (file-key file)))
       (if (and (not (nil-pathname-p path))
                (or force-read
                    (alex:when-let ((entry (gethash key *cache*)))
@@ -477,27 +489,31 @@ entry's `cached-value'. ")
 
 (export-always 'content)
 (-> content (file &key (:force-read boolean) (:wait-p boolean)) t)
-(defun content (file &key force-read wait-p)
+(defun content (file &key force-read (wait-p t))
   "Return the content of FILE.
 When FORCE-READ is non-nil, the cache is skipped and the file is re-read.
 
-When FILE has a non-nil ASYNC-P, then this returns (VALUES NIL THREAD) if
-`read-file' is not done computing, with THREAD the computing thread.
-With WAIT-P, wait until the the THREAD is done and return the computed value.
-
-Note that if two files, say FILE1 and FILE2 expand to the same file, with FILE1
-being async while FILE2 is not, then if FILE1 content is fetched first then
-FILE2 will also be fetch asynchronously."
+The read is asynchronous.  By default, `content' waits for the read to finish
+before returning the result.  But if `wait-p' is nil, it returns directly
+with (VALUES NIL THREAD) if the reading THREAD is not done yet."
   (let ((entry (cache-entry file force-read)))
     (sera:synchronized (entry)
       (cond
-        ((or (not (async-p (source-file entry)))
-             (not (bt:threadp (cached-value entry))))
+        ((not (bt:threadp (cached-value entry)))
          (values (cached-value entry) nil))
         ((or wait-p (not (bt:thread-alive-p (cached-value entry))))
-         (setf (cached-value entry)
-               (bt:join-thread (cached-value entry)))
-         (values (cached-value entry) nil))
+         ;;   Thread may be aborted.
+         (multiple-value-bind (value error)
+             (ignore-errors (bt:join-thread (cached-value entry)))
+           (if (or error
+                   (typep value 'condition))
+               (progn
+                 (sera:synchronized (*cache*)
+                   (remhash (file-key file) *cache*))
+                 (values nil (or error value)))
+               (progn
+                 (setf (cached-value entry) value)
+                 (values value nil)))))
         (t
          (values nil (cached-value entry)))))))
 
@@ -519,19 +535,18 @@ Return the number of decrements, or NIL if there was none."
 (defvar *timeout* 0.1
   "Time in seconds to wait for other write requests.")
 
-(defun make-worker (file cache-entry)
-  (lambda ()
-    (labels ((maybe-write ()
-               (let ((write-signaled? (drain-semaphore (worker-notifier cache-entry) *timeout*)))
-                 (if write-signaled?
-                     (progn
-                       (write-file (profile file) file)
-                       (maybe-write))
-                     (sera:synchronized (cache-entry)
-                       (setf
-                        (worker-notifier cache-entry) nil
-                        (worker cache-entry) nil))))))
-      (maybe-write))))
+(defun worker-write (file cache-entry)
+  (labels ((maybe-write ()
+             (let ((write-signaled? (drain-semaphore (worker-notifier cache-entry) *timeout*)))
+               (if write-signaled?
+                   (progn
+                     (write-file (profile file) file)
+                     (maybe-write))
+                   (sera:synchronized (cache-entry)
+                     (setf
+                      (worker-notifier cache-entry) nil
+                      (worker cache-entry) nil))))))
+    (maybe-write)))
 
 (defun write-cache-entry (file entry)
   (unless (worker-notifier entry)
@@ -539,7 +554,8 @@ Return the number of decrements, or NIL if there was none."
   (bt:signal-semaphore (worker-notifier entry))
   (unless (worker entry)
     (setf (worker entry)
-          (run-thread "NFiles worker" (make-worker file entry))))
+          (run-thread "NFiles worker" (write-handler file)
+            (worker-write file entry))))
   (worker entry))
 
 (-> (setf content) (t file) t)

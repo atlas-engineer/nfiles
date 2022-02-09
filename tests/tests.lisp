@@ -250,12 +250,43 @@
     (is (nfiles:content file) (format nil "~a: ~a" test-content (1- limit)))))
 
 
-(nfile-test "Deserialization error"
+(nfile-test "Deserialization error (forward)"
   (let ((corrupted-path "corrupt.lisp"))
     (alexandria:write-string-into-file "(" corrupted-path)
-    (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt")))
-      (is-error (nfiles:content corrupted-file)
-                error)
+    (let* ((errors 0)
+           (corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt"
+                                          :read-handler (lambda (c)
+                                                          (incf errors)
+                                                          (invoke-restart 'nfiles::forward-condition c)))))
+      (multiple-value-bind (value error)
+          (nfiles:content corrupted-file)
+        (is value nil)
+        (is-condition error 'end-of-file))
+      (is errors 1)
+      (multiple-value-bind (value error)
+          (nfiles:content corrupted-file)
+        (is value nil)
+        (is-condition error 'end-of-file))
+      (is errors 2)
+      (ok (uiop:file-exists-p (nfiles:expand corrupted-file)))
+      (setf (nfiles:on-deserialization-error corrupted-file) 'nfiles:delete)
+      (nfiles:content corrupted-file)
+      (is (uiop:file-exists-p (nfiles:expand corrupted-file))
+          nil))))
+
+(nfile-test "Deserialization error (abort)"
+  (let ((corrupted-path "corrupt.lisp"))
+    (alexandria:write-string-into-file "(" corrupted-path)
+    (let* ((errors 0)
+           (corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt"
+                                          :read-handler (lambda (c)
+                                                          (declare (ignore c))
+                                                          (incf errors)
+                                                          (abort)))))
+      (is (nfiles:content corrupted-file) nil)
+      (is errors 1)
+      (is (nfiles:content corrupted-file) nil)
+      (is errors 2)
       (ok (uiop:file-exists-p (nfiles:expand corrupted-file)))
       (setf (nfiles:on-deserialization-error corrupted-file) 'nfiles:delete)
       (nfiles:content corrupted-file)
@@ -293,7 +324,7 @@
      nil)))
 
 (defclass* slow-file (nfiles:file)
-  ((nfiles:async-p t))
+  ()
   (:accessor-name-transformer (class*:make-name-transformer name)))
 
 (defmethod nfiles:read-file ((profile nfiles:profile) (file slow-file) &key)
@@ -307,10 +338,10 @@
     (ok (uiop:file-exists-p (nfiles:expand file)))
     (nfiles::clear-cache)
     (multiple-value-bind (result maybe-thread)
-        (nfiles:content file)
+        (nfiles:content file :wait-p nil)
       (is result nil)
       (ok (bt:threadp maybe-thread)))
-    (is (nfiles:content file :wait-p t)
+    (is (nfiles:content file)
         test-content)))
 
 (nfile-gpg-test "GPG test"
