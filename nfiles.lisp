@@ -51,6 +51,10 @@ The profile is only set at instantiation time.")
     ""
     :type string
     :documentation "Name used to identify the object in a human-readable manner.")
+   (async-p
+    nil
+    :type boolean
+    :documentation "When non-nil, `read-file' is called in the background.")
    (on-external-modification
     'ask
     :type (member ask reload overwrite)
@@ -424,9 +428,18 @@ entry's `cached-value'. ")
     :type (or null bt:semaphore)))
   (:accessor-name-transformer (class*:make-name-transformer name)))
 
+(defmacro run-thread (name lambda)
+  `(bt:make-thread ,lambda
+                  :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
+                  :name ,name))
+
 (defmethod initialize-instance :after ((entry cache-entry) &key)
   (setf (cached-value entry)
-        (prog1 (read-file (profile (source-file entry)) (source-file entry))
+        (prog1 (flet ((read* ()
+                        (read-file (profile (source-file entry)) (source-file entry))))
+                 (if (async-p (source-file entry))
+                     (run-thread "NFiles reader" (lambda () (read*)))
+                     (read*)))
           (setf (last-update entry) (get-universal-time)))))
 
 (defvar *cache* (sera:dict)
@@ -463,13 +476,30 @@ entry's `cached-value'. ")
                                (make-instance 'cache-entry :source-file file))))))
 
 (export-always 'content)
-(-> content (file &key (:force-read boolean)) t)
-(defun content (file &key force-read)
+(-> content (file &key (:force-read boolean) (:wait-p boolean)) t)
+(defun content (file &key force-read wait-p)
   "Return the content of FILE.
-When FORCE-READ is non-nil, the cache is skipped and the file is re-read."
+When FORCE-READ is non-nil, the cache is skipped and the file is re-read.
+
+When FILE has a non-nil ASYNC-P, then this returns (VALUES NIL THREAD) if
+`read-file' is not done computing, with THREAD the computing thread.
+With WAIT-P, wait until the the THREAD is done and return the computed value.
+
+Note that if two files, say FILE1 and FILE2 expand to the same file, with FILE1
+being async while FILE2 is not, then if FILE1 content is fetched first then
+FILE2 will also be fetch asynchronously."
   (let ((entry (cache-entry file force-read)))
     (sera:synchronized (entry)
-      (cached-value entry))))
+      (cond
+        ((or (not (async-p (source-file entry)))
+             (not (bt:threadp (cached-value entry))))
+         (values (cached-value entry) nil))
+        ((or wait-p (not (bt:thread-alive-p (cached-value entry))))
+         (setf (cached-value entry)
+               (bt:join-thread (cached-value entry)))
+         (values (cached-value entry) nil))
+        (t
+         (values nil (cached-value entry)))))))
 
 (defun drain-semaphore (semaphore &optional timeout)
   "Decrement the semaphore counter down to 0.
@@ -509,9 +539,7 @@ Return the number of decrements, or NIL if there was none."
   (bt:signal-semaphore (worker-notifier entry))
   (unless (worker entry)
     (setf (worker entry)
-          (bt:make-thread (make-worker file entry)
-                          :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
-                          :name "NFiles worker")))
+          (run-thread "NFiles worker" (make-worker file entry))))
   (worker entry))
 
 (-> (setf content) (t file) t)

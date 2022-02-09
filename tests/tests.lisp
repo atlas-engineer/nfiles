@@ -292,6 +292,27 @@
        not-evaluated)
      nil)))
 
+(defclass* slow-file (nfiles:file)
+  ((nfiles:async-p t))
+  (:accessor-name-transformer (class*:make-name-transformer name)))
+
+(defmethod nfiles:read-file ((profile nfiles:profile) (file slow-file) &key)
+  (sleep 1)
+  (call-next-method))
+
+(nfile-test "Async read test"
+  (let ((file (make-instance 'slow-file :base-path #p"slow"))
+        (test-content "Slow world"))
+    (bt:join-thread (setf (nfiles:content file) test-content))
+    (ok (uiop:file-exists-p (nfiles:expand file)))
+    (nfiles::clear-cache)
+    (multiple-value-bind (result maybe-thread)
+        (nfiles:content file)
+      (is result nil)
+      (ok (bt:threadp maybe-thread)))
+    (is (nfiles:content file :wait-p t)
+        test-content)))
+
 (nfile-gpg-test "GPG test"
   (let ((file (make-instance 'nfiles:gpg-file :base-path #p"fog"))
         (test-content "Cryptic world"))
