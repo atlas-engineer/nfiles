@@ -426,10 +426,8 @@ entry's `cached-value'. ")
 
 (defmethod initialize-instance :after ((entry cache-entry) &key)
   (setf (cached-value entry)
-        (let ((path (expand (source-file entry))))
-          (when (uiop:file-exists-p path)
-            (prog1 (read-file (profile (source-file entry)) (source-file entry))
-              (setf (last-update entry) (get-universal-time)))))))
+        (prog1 (read-file (profile (source-file entry)) (source-file entry))
+          (setf (last-update entry) (get-universal-time)))))
 
 (defvar *cache* (sera:dict)
   "Internal `*cache*' associating expanded paths with a dedicated `cache-entry'.")
