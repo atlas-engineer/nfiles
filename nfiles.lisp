@@ -436,8 +436,8 @@ entry's `cached-value'. ")
 
 (defmacro run-thread (name handler &body body)
   `(bt:make-thread (lambda ()
-                     (restart-case
-                         (handler-bind ((t ,handler)) ,@body)
+                     (restart-case (handler-bind ((error ,handler))
+                                     ,@body)
                        (forward-condition (c)
                          c)))
                    :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
@@ -445,8 +445,7 @@ entry's `cached-value'. ")
 
 (defmethod initialize-instance :after ((entry cache-entry) &key)
   (setf (cached-value entry)
-        (prog1 (run-thread "NFiles reader"
-                 (read-handler (source-file entry))
+        (prog1 (run-thread "NFiles reader" (read-handler (source-file entry))
                  (read-file (profile (source-file entry)) (source-file entry)))
           (setf (last-update entry) (get-universal-time)))))
 
@@ -497,25 +496,29 @@ The read is asynchronous.  By default, `content' waits for the read to finish
 before returning the result.  But if `wait-p' is nil, it returns directly
 with (VALUES NIL THREAD) if the reading THREAD is not done yet."
   (let ((entry (cache-entry file force-read)))
-    (sera:synchronized (entry)
-      (cond
-        ((not (bt:threadp (cached-value entry)))
-         (values (cached-value entry) nil))
-        ((or wait-p (not (bt:thread-alive-p (cached-value entry))))
-         ;;   Thread may be aborted.
-         (multiple-value-bind (value error)
-             (ignore-errors (bt:join-thread (cached-value entry)))
-           (if (or error
-                   (typep value 'condition))
-               (progn
-                 (sera:synchronized (*cache*)
-                   (remhash (file-key file) *cache*))
-                 (values nil (or error value)))
-               (progn
-                 (setf (cached-value entry) value)
-                 (values value nil)))))
-        (t
-         (values nil (cached-value entry)))))))
+    ;; WARNING: We don't lock `entry' when joining thread to avoid a dead lock.
+    (let ((value (sera:synchronized (entry)
+                   (cached-value entry))))
+      (if (and (bt:threadp value)
+               (or wait-p (not (bt:thread-alive-p value))))
+          ;; Thread may be aborted, so we wrap with  `ignore-errors'.
+          (multiple-value-bind (value error)
+              (ignore-errors (bt:join-thread value))
+            (if (or error
+                    (typep value 'condition))
+                (progn
+                  (sera:synchronized (*cache*)
+                    (remhash (file-key file) *cache*))
+                  (values nil (or error value)))
+                (progn
+                  (sera:synchronized (entry)
+                    (setf (cached-value entry) value))
+                  (values value nil))))
+
+          (sera:synchronized (entry)
+            (if (bt:threadp value)
+                (values nil value)
+                (values value nil)))))))
 
 (defun drain-semaphore (semaphore &optional timeout)
   "Decrement the semaphore counter down to 0.
