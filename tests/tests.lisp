@@ -372,4 +372,35 @@
       (ok (find-if (lambda (filename) (search "-backup" filename))
                    (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
+(defclass* broken-write-file (nfiles:gpg-lisp-file)
+  ((appended-value 1))
+  (:accessor-name-transformer (class*:make-name-transformer name)))
+
+(defmethod nfiles:write-file ((profile nfiles:profile) (file broken-write-file) &key destination)
+  (nfiles/gpg:with-gpg-file (stream destination :direction :output)
+    (nfiles:serialize profile file stream))
+  (print (/ 1 (appended-value file))))
+
+(nfile-gpg-test "Staged GPG file with preserved permissions"
+  (let ((file (make-instance 'broken-write-file :base-path #p"fog"
+                             :write-handler (lambda (c) (declare (ignore c)) (abort))))
+        (test-content '(a b))
+        (new-content "More cryptic world!"))
+    (bt:join-thread (setf (nfiles:content file) test-content))
+    (let ((permissions (nfiles:permissions (nfiles:expand file)))
+          (last-write-date (uiop:safe-file-write-date (nfiles:expand file))))
+      (if (member :other-read permissions)
+          (setf permissions (remove :other-read permissions))
+          (push :other-read permissions))
+      (setf (nfiles:permissions (nfiles:expand file))
+            permissions)
+      (setf (appended-value file) 0)
+      (sleep 1)
+      (is-error (bt:join-thread (setf (nfiles:content file) new-content))
+                'error)
+      (is (nfiles:content file) new-content)
+      (is (uiop:safe-file-write-date (nfiles:expand file)) last-write-date)
+      (is (nfiles:permissions (nfiles:expand file))
+          permissions))))
+
 (finalize)

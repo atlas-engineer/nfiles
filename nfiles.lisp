@@ -298,44 +298,49 @@ See `deserialize' for the reverse action."))
   nil)
 
 (export-always 'write-file)
-(defgeneric write-file (profile file &key &allow-other-keys)
+(defgeneric write-file (profile file &key destination &allow-other-keys)
   (:documentation "Persist FILE to disk.
+DESTINATION is set by default to a staged pathname (using
+`uiop:with-staging-pathname') which is renamed to the final name (the result
+`expand' on FILE) if everything went well.
+This guarantees that on error the original file is left untouched.
+
 See `read-file' for the reverse action."))
 
 (defmethod write-file :around ((profile profile) (file file) &key)
   (unless (nil-pathname-p (expand file))
     (let ((entry (cache-entry file)))
       ;; It's important to fetch the entry before we write to avoid a cache miss.
-      (call-next-method)
+      (let* ((path (expand file))
+             (destination path)
+             (exists? (uiop:file-exists-p path))
+             (permissions nil)
+             (user nil)
+             (group nil))
+        (when exists?
+          (setf
+           permissions (permissions path)
+           user (file-user path)
+           group (file-group path)))
+        (uiop:with-staging-pathname (destination)
+          (call-next-method profile file :destination destination))
+        (when exists?
+          (setf
+           (permissions path) permissions
+           (file-user path) user
+           (file-group path) group)))
       (sera:synchronized (entry)
         (setf (last-update entry) (get-universal-time))))))
 
-(defmethod write-file ((profile profile) (file file) &key)
+(defmethod write-file ((profile profile) (file file) &key destination)
   "Write the result of `serialize' to the `file' path."
-  (let* ((path (expand file))
-         (destination path)
-         (exists? (uiop:file-exists-p path))
-         (permissions nil)
-         (user nil)
-         (group nil))
-    (when exists?
-      (setf
-       permissions (permissions path)
-       user (file-user path)
-       group (file-group path)))
-    (uiop:with-staging-pathname (destination)
-      (with-open-file (stream destination :direction :output :if-exists :supersede)
-        (serialize profile file stream)))
-    (when exists?
-      (setf
-       (permissions path) permissions
-       (file-user path) user
-       (file-group path) group))))
+  (with-open-file (stream destination :direction :output :if-exists :supersede)
+    (serialize profile file stream)))
 
-(defmethod write-file ((profile profile) (file gpg-file) &key)
+(defmethod write-file ((profile profile) (file gpg-file) &key destination)
   "Crypt to FILE with GPG.
 See `*gpg-default-recipient*'."
-  (nfiles/gpg:with-gpg-file (stream (expand file) :direction :output)
+  (nfiles/gpg:with-gpg-file (stream destination :direction :output)
     (serialize profile file stream)))
 
 (defmethod write-file ((profile profile) (file read-only-file) &key)
