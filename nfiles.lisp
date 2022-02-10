@@ -510,7 +510,7 @@ with (VALUES NIL THREAD) if the reading THREAD is not done yet."
           (multiple-value-bind (result error)
               (ignore-errors (bt:join-thread value))
             (if (or error
-                    (typep value 'condition))
+                    (typep result 'condition))
                 (progn
                   (sera:synchronized (*cache*)
                     (remhash (file-key file) *cache*))
