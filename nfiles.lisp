@@ -307,7 +307,8 @@ This guarantees that on error the original file is left untouched.
 
 See `read-file' for the reverse action."))
 
-(defmethod write-file :around ((profile profile) (file file) &key)
+(defmethod write-file :around ((profile profile) (file file) &key destination)
+  (declare (ignore destination))
   (unless (nil-pathname-p (expand file))
     (let ((entry (cache-entry file)))
       ;; It's important to fetch the entry before we write to avoid a cache miss.
@@ -343,12 +344,14 @@ See `*gpg-default-recipient*'."
   (nfiles/gpg:with-gpg-file (stream destination :direction :output)
     (serialize profile file stream)))
 
-(defmethod write-file ((profile profile) (file read-only-file) &key)
+(defmethod write-file ((profile profile) (file read-only-file) &key destination)
   "Don't write anything for `read-only-file'."
+  (declare (ignore destination))
   nil)
 
-(defmethod write-file ((profile read-only-profile) (file file) &key)
+(defmethod write-file ((profile read-only-profile) (file file) &key destination)
   "Don't write anything when using the `read-only-profile'."
+  (declare (ignore destination))
   nil)
 
 (defun backup (path)

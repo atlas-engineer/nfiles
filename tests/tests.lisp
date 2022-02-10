@@ -274,6 +274,9 @@
       (is (uiop:file-exists-p (nfiles:expand corrupted-file))
           nil))))
 
+;; When SBCL threads abort, `bt:join-thread' errors out.  This is not the case
+;; in all compilers though.
+#+sbcl
 (nfile-test "Deserialization error (abort)"
   (let ((corrupted-path "corrupt.lisp"))
     (alexandria:write-string-into-file "(" corrupted-path)
