@@ -502,18 +502,18 @@ with (VALUES NIL THREAD) if the reading THREAD is not done yet."
       (if (and (bt:threadp value)
                (or wait-p (not (bt:thread-alive-p value))))
           ;; Thread may be aborted, so we wrap with  `ignore-errors'.
-          (multiple-value-bind (value error)
+          (multiple-value-bind (result error)
               (ignore-errors (bt:join-thread value))
             (if (or error
                     (typep value 'condition))
                 (progn
                   (sera:synchronized (*cache*)
                     (remhash (file-key file) *cache*))
-                  (values nil (or error value)))
+                  (values nil (or error result)))
                 (progn
                   (sera:synchronized (entry)
-                    (setf (cached-value entry) value))
-                  (values value nil))))
+                    (setf (cached-value entry) result))
+                  (values result nil))))
 
           (sera:synchronized (entry)
             (if (bt:threadp value)
