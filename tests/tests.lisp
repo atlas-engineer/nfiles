@@ -35,14 +35,14 @@
 (nfile-test "Special character support"
   (let ((file (make-instance 'nfiles:file :base-path "["))) ; REVIEW: OK to use string here?
     (is (nfiles:expand file)
-        (uiop:merge-pathnames* #p"\\[" *test-dir*)
+        (uiop:ensure-pathname (uiop:strcat (namestring *test-dir*) "["))
         :test 'uiop:pathname-equal)))
 
 (nfile-test "Tilde = home directory"
   (let ((file1 (make-instance 'nfiles:file :base-path "~/[foo")) ; REVIEW: OK to use string here?
         (file2 (make-instance 'nfiles:file :base-path #p"~/\\[bar")))
     (is (nfiles:expand file1)
-        (uiop:merge-pathnames* #p"\\[foo" (user-homedir-pathname))
+        (uiop:ensure-pathname (uiop:strcat (namestring (user-homedir-pathname)) "[foo"))
         :test 'uiop:pathname-equal)
     (is (nfiles:expand file2)
         (uiop:merge-pathnames* #p"\\[bar" (user-homedir-pathname))
@@ -67,7 +67,8 @@
 (nfile-test "Application config file"
   (let ((file (make-instance 'myapp-config-file :base-path #p"init")))
     (is (nfiles:expand file)
-        (uiop:xdg-config-home "myapp/init.lisp"))))
+        (uiop:xdg-config-home "myapp/init.lisp")
+        :test 'uiop:pathname-equal)))
 
 (nfile-test "Read-only file"
   (let ((file (make-instance 'nfiles:read-only-file :base-path #p"should-not-exist")))
