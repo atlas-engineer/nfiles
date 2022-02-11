@@ -72,11 +72,14 @@
                   (sb-posix:passwd-uid (sb-posix:getpwnam new-user))
                   (sb-posix:stat-gid (sb-posix:lstat path)))
   #-sbcl
-  (let ((native-path (uiop:native-namestring path)))
-    (iolib/syscalls:chown native-path
-                          (nth-value 2 (iolib/syscalls:getpwnam new-user))
-                          (iolib/syscalls:stat-gid (iolib/syscalls:lstat
-                                                    native-path)))))
+  (let ((native-path (uiop:native-namestring path))
+        (uid (nth-value 2 (iolib/syscalls:getpwnam new-user))))
+    (if uid
+        (iolib/syscalls:chown native-path
+                              uid
+                              (iolib/syscalls:stat-gid (iolib/syscalls:lstat
+                                                        native-path)))
+        (error "User ~a does not exist" new-group))))
 
 (export-always 'file-group)
 (defmethod file-group (path)
@@ -97,8 +100,11 @@
                   (sb-posix:stat-uid (sb-posix:lstat path))
                   (sb-posix:group-gid (sb-posix:getgrnam new-group)))
   #-sbcl
-  (let ((native-path (uiop:native-namestring path)))
-    (iolib/syscalls:chown native-path
-                          (iolib/syscalls:stat-uid (iolib/syscalls:lstat
-                                                    native-path))
-                          (nth-value 2 (iolib/syscalls:getgrnam new-group)))))
+  (let ((native-path (uiop:native-namestring path))
+        (gid (nth-value 2 (iolib/syscalls:getgrnam new-group))))
+    (if gid
+        (iolib/syscalls:chown native-path
+                              (iolib/syscalls:stat-uid (iolib/syscalls:lstat
+                                                        native-path))
+                              gid)
+        (error "Group ~s does not exist" new-group))))
