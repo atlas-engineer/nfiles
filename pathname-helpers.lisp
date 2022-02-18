@@ -63,10 +63,10 @@
 (export-always 'file-user)
 (defmethod file-user (path)
   "Return PATH owner name."
-  ;; `file-author' seems broken on ECL, it always returns "UNKNOWN".
-  #-ecl
+  ;; `file-author' seems broken on many implementations.
+  #+(or ccl sbcl)
   (file-author path)
-  #+ecl
+  #-(or  ccl sbcl)
   (iolib/syscalls:getpwuid (iolib/syscalls:stat-uid
                             (iolib/syscalls:lstat
                              (uiop:native-namestring path)))))
