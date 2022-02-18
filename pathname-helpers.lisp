@@ -39,7 +39,7 @@
   :test #'equal)
 
 (export-always 'permissions)
-(defmethod permissions (path)
+(defun permissions (path)
   "Return a list of permissions as per `+permissions+'."
   #+sbcl
   (let ((mode (sb-posix:stat-mode
@@ -50,7 +50,7 @@
   #-sbcl
   (iolib/os:file-permissions (uiop:native-namestring path)))
 
-(defmethod (setf permissions) (permissions path)
+(defun (setf permissions) (permissions path)
   "Set the PERMISSIONS or PATH as per `+permissions+'."
   #+sbcl
   (sb-posix:chmod path
@@ -61,7 +61,7 @@
   (setf (iolib/os:file-permissions (uiop:native-namestring path)) permissions))
 
 (export-always 'file-user)
-(defmethod file-user (path)
+(defun file-user (path)
   "Return PATH owner name."
   ;; `file-author' seems broken on many implementations.
   #+(or ccl sbcl)
@@ -71,7 +71,7 @@
                             (iolib/syscalls:lstat
                              (uiop:native-namestring path)))))
 
-(defmethod (setf file-user) (new-user path)
+(defun (setf file-user) (new-user path)
   "Set PATH owner to NEW-USER (a string)."
   #+sbcl
   (sb-posix:chown path
@@ -88,7 +88,7 @@
         (error "User ~a does not exist" new-group))))
 
 (export-always 'file-group)
-(defmethod file-group (path)
+(defun file-group (path)
   "Return PATH group name."
   #+sbcl
   (sb-posix:group-name
@@ -99,7 +99,7 @@
                             (iolib/syscalls:lstat
                              (uiop:native-namestring path)))))
 
-(defmethod (setf file-group) (new-group path)
+(defun (setf file-group) (new-group path)
   "Set PATH group to NEW-GROUP (a string)."
   #+sbcl
   (sb-posix:chown path
