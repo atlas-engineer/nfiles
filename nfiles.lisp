@@ -155,6 +155,8 @@ removed.")
 
 (export-always 'all-files)
 (defun all-files (&rest packages)
+  "Return all instantiated `file' objects belong to PACKAGES.
+If no package is specified, return all `file' objects."
   (flet ((ensure-package (designator)
            (if (packagep designator)
                designator
@@ -164,7 +166,7 @@ removed.")
       (maphash (lambda (file value)
                  (declare (ignore value))
                  (when (or (not packages)
-                           (find (sera:class-name-of file) packages))
+                           (find (symbol-package (sera:class-name-of file)) packages))
                    (push file result)))
                *index*)
       result)))
