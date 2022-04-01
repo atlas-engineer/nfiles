@@ -40,6 +40,26 @@
 - if it's a file, the name of the file including its type (extension)."
   (first (last (pathname-directory (uiop:ensure-directory-pathname pathname)))))
 
+(export-always 'join)
+(-> join (&rest pathname-designator) (or pathname-designator null))
+(defun join (&rest paths)
+  "Concatenate PATHS."
+  (if (< (length paths) 2)
+      (the (values pathname &optional)
+           (uiop:ensure-pathname (first paths)))
+      (apply #'join
+             (let ((path1 (first paths))
+                   (path2 (second paths)))
+               (if (pathname-directory path2)
+                   (uiop:merge-pathnames* (uiop:relativize-pathname-directory (uiop:ensure-pathname path2))
+                                          (uiop:ensure-pathname path1
+                                                                :ensure-directory t))
+                   (let ((new-base (uiop:strcat (basename path1)
+                                                (basename path2))))
+                     (make-pathname :defaults path1 :type (pathname-type new-base)
+                                    :name (pathname-name new-base)))))
+             (cddr paths))))
+
 (alex:define-constant +permissions+
     '((:user-read . 256) (:user-write . 128) (:user-exec . 64) (:group-read . 32)
       (:group-write . 16) (:group-exec . 8) (:other-read . 4) (:other-write . 2)
