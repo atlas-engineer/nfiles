@@ -207,16 +207,12 @@ See `expand' for a convenience wrapper."))
                               :truenamize t))))
 
 (defmethod resolve ((profile profile) (file lisp-file))
-  (make-pathname :defaults (call-next-method) :type "lisp"))
+  "Append the '.lisp' extension if not already present."
+  (ensure-type (call-next-method) "lisp"))
 
 (defmethod resolve ((profile profile) (file gpg-file))
-  (let ((path (call-next-method)))
-    (if (string-equal (pathname-type* path) "gpg")
-        file
-        (make-pathname :defaults path :type "gpg"
-                       :name (alex:if-let ((ext (pathname-type* path)))
-                               (uiop:strcat (pathname-name path) "." ext)
-                               (pathname-name path))))))
+  "Append the '.gpg' extension if not already present."
+  (ensure-type (call-next-method) "gpg"))
 
 (defun maybe-xdg (xdg-fun path)
   (if (uiop:absolute-pathname-p path)
