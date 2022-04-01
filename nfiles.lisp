@@ -155,7 +155,7 @@ removed.")
 
 (export-always 'all-files)
 (defun all-files (&rest packages)
-  "Return all instantiated `file' objects belong to PACKAGES.
+  "Return all instantiated `file' objects belonging to PACKAGES.
 If no package is specified, return all `file' objects."
   (flet ((ensure-package (designator)
            (if (packagep designator)
