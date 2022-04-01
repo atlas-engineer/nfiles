@@ -26,6 +26,42 @@
        (nfile-test ,name (progn ,@body))
        (warn "Skipping GPG tests, set the `nfiles/gpg:*gpg-default-recipient*' to enable.")))
 
+(subtest "Basename"
+  (is (nfiles:basename "")
+      nil)
+  (is (nfiles:basename "foo/bar")
+      "bar")
+  (is (nfiles:basename #p"")
+      nil)
+  (is (nfiles:basename #p"/foo/bar/baz")
+      "baz")
+  (is (nfiles:basename #p"/foo/bar/baz/")
+      "baz")
+  (is (nfiles:basename #p"/foo/bar/baz.ext")
+      "baz.ext")
+  (is (nfiles:basename #p"foo/bar/baz.ext")
+      "baz.ext"))
+
+(subtest "Join"
+  (is (nfiles:join "foo")
+      #p"foo"
+      :test 'uiop:pathname-equal)
+  (is (nfiles:join #p"foo" "bar")
+      #p"foobar"
+      :test 'uiop:pathname-equal)
+  (is (nfiles:join #p"foo" "bar" #p"baz")
+      #p"foobarbaz"
+      :test 'uiop:pathname-equal)
+  (is (nfiles:join #p"foo" "bar/baz")
+      #p"foo/bar/baz"
+      :test 'uiop:pathname-equal)
+  (is (nfiles:join #p"foo.txt" "bar/baz")
+      #p"foo.txt/bar/baz"
+      :test 'uiop:pathname-equal)
+  (is (nfiles:join #p"foo.txt" "bar.ext")
+      #p"foo.txtbar.ext"
+      :test 'uiop:pathname-equal))
+
 (nfile-test "Simple path check"
   (let ((file (make-instance 'nfiles:file :base-path #p"foo")))
     (is (nfiles:expand file)
