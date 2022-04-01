@@ -60,6 +60,15 @@
                                     :name (pathname-name new-base)))))
              (cddr paths))))
 
+(export-always 'ensure-type)
+(-> ensure-type (pathname-designator string) pathname-designator)
+(defun ensure-type (path type)
+  "Return PATH with type set to TYPE, if it's not already the case.
+Case is ignored."
+  (if (string-equal type (pathname-type path))
+      path
+      (the (values pathname &optional) (join path "." type))))
+
 (alex:define-constant +permissions+
     '((:user-read . 256) (:user-write . 128) (:user-exec . 64) (:group-read . 32)
       (:group-write . 16) (:group-exec . 8) (:other-read . 4) (:other-write . 2)
