@@ -385,7 +385,7 @@
         test-content)))
 
 (nfile-gpg-test "GPG test"
-  (let ((file (make-instance 'nfiles:gpg-file :base-path #p"fog"))
+  (let ((file (make-instance 'nfiles:gpg-file :base-path #p"fog.gpg"))
         (test-content "Cryptic world"))
     (bt:join-thread (setf (nfiles:content file) test-content))
     (ok (uiop:file-exists-p (nfiles:expand file)))
@@ -396,16 +396,16 @@
     (isnt (alexandria:read-file-into-string (nfiles:expand file))
           test-content)
     (nfiles::clear-cache)
-    (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path #p"fog")))
+    (let ((synonym-file (make-instance 'nfiles:gpg-file :base-path #p"fog.gpg")))
       (is (nfiles:content synonym-file) test-content))))
 
 (nfile-gpg-test "GPG Backup"
-  (let ((corrupted-file (make-instance 'nfiles:gpg-file :base-path #p"corrupt.lisp")))
+  (let ((corrupted-file (make-instance 'nfiles:gpg-file :base-path #p"corrupt.lisp.gpg")))
     (bt:join-thread (setf (nfiles:content corrupted-file) "("))
     (ok (uiop:file-exists-p "corrupt.lisp.gpg"))
     ;; Clear the cache so that next file tries reading the corrupted file.
     (nfiles::clear-cache)
-    (let ((corrupted-lisp-file (make-instance 'nfiles:gpg-lisp-file :base-path #p"corrupt.lisp"
+    (let ((corrupted-lisp-file (make-instance 'nfiles:gpg-lisp-file :base-path #p"corrupt.gpg"
                                               :on-read-error 'nfiles:backup)))
       (is (nfiles:expand corrupted-lisp-file) (uiop:ensure-pathname "corrupt.lisp.gpg" :truenamize t))
       (is (nfiles:content corrupted-lisp-file) nil)

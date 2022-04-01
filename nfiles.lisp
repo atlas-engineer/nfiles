@@ -119,27 +119,29 @@ not provided."))
 (defclass* gpg-file (file)
   ()
   (:export-class-name-p t)
-  (:documentation "The file is automatically crypted and decrypted using the
-specified recipient key.
-The '.gpg' extension is automatically added if missing."))
+  (:documentation "If the resolved path has the GPG type (extension), the file is
+automatically crypted and decrypted using the specified recipient key.
+
+See `nfiles/gpg:*gpg-default-recipient*'."))
 
 (defclass* gpg-lisp-file (gpg-file lisp-file)
-    ()
-    (:export-class-name-p t)
-    (:documentation "The file is automatically crypted and decrypted using the
-specified recipient key.
-The '.lisp.gpg' extension is automatically added if missing."))
+  ()
+  (:export-class-name-p t)
+  (:documentation "If the resolved path has the GPG type (extension), the file is
+automatically crypted and decrypted using the specified recipient key.
+
+The '.lisp' extension is automatically added if missing."))
 
 (defclass* read-only-file (file)
-    ()
-    (:export-class-name-p t)
-    (:documentation "File that's not written to on change.
+  ()
+  (:export-class-name-p t)
+  (:documentation "File that's not written to on change.
 Note that the file's `content' can still be modified in-memory."))
 
 (defclass* virtual-file (read-only-file)
-    ()
-    (:export-class-name-p t)
-    (:documentation "File that's not read nor written to.  It's meant to handle data
+  ()
+  (:export-class-name-p t)
+  (:documentation "File that's not read nor written to.  It's meant to handle data
 in-memory.
 
 Note that if multiple `virtual-file' expand to the same path, they share the
@@ -210,9 +212,14 @@ See `expand' for a convenience wrapper."))
   "Append the '.lisp' extension if not already present."
   (ensure-type (call-next-method) "lisp"))
 
-(defmethod resolve ((profile profile) (file gpg-file))
-  "Append the '.gpg' extension if not already present."
-  (ensure-type (call-next-method) "gpg"))
+(defmethod resolve ((profile profile) (file gpg-lisp-file))
+  "Ensure the extension is .lisp or .lisp.gpg."
+  (let ((path (base-path file)))
+    (if (string-equal "gpg" (pathname-type path))
+        (if (string-equal "lisp" (pathname-type (pathname-name path)))
+            path
+            (ensure-type (ensure-type (pathname-name path) "lisp") "gpg"))
+        (call-next-method))))
 
 (defun maybe-xdg (xdg-fun path)
   (if (uiop:absolute-pathname-p path)
@@ -336,11 +343,16 @@ See `read-file' for the reverse action."))
   (with-open-file (stream destination :direction :output :if-exists :supersede)
     (serialize profile file stream)))
 
+(defun gpg-path-p (file)
+  (string-equal "gpg" (pathname-type (expand file))))
+
 (defmethod write-file ((profile profile) (file gpg-file) &key destination)
   "Crypt to FILE with GPG.
 See `*gpg-default-recipient*'."
-  (nfiles/gpg:with-gpg-file (stream destination :direction :output)
-    (serialize profile file stream)))
+  (if (gpg-path-p file)
+      (nfiles/gpg:with-gpg-file (stream destination :direction :output)
+        (serialize profile file stream))
+      (call-next-method profile file :destination destination)))
 
 (defmethod write-file ((profile profile) (file read-only-file) &key destination)
   "Don't write anything for `read-only-file'."
@@ -394,8 +406,10 @@ See `write-file' for the reverse action."))
 (defmethod read-file ((profile profile) (file gpg-file) &key)
   "Decrypt FILE with GPG and return resulting stream.
 See `*gpg-default-recipient*'."
-  (nfiles/gpg:with-gpg-file (stream (expand file))
-    (deserialize profile file stream)))
+  (if (gpg-path-p file)
+      (nfiles/gpg:with-gpg-file (stream (expand file))
+        (deserialize profile file stream))
+      (call-next-method profile file)))
 
 (defmethod read-file ((profile profile) (file virtual-file) &key)
   "Don't load anything for virtual files."
