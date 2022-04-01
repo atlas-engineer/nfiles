@@ -32,6 +32,14 @@
              (uiop:pathname-parent-directory-pathname path)
              (uiop:pathname-directory-pathname path)))))
 
+(export-always 'basename)
+(-> basename (pathname-designator) (or pathname-designator null))
+(defun basename (pathname)
+  "Return the basename, that is:
+- if it's a directory, the name of the directory,
+- if it's a file, the name of the file including its type (extension)."
+  (first (last (pathname-directory (uiop:ensure-directory-pathname pathname)))))
+
 (alex:define-constant +permissions+
     '((:user-read . 256) (:user-write . 128) (:user-exec . 64) (:group-read . 32)
       (:group-write . 16) (:group-exec . 8) (:other-read . 4) (:other-write . 2)
