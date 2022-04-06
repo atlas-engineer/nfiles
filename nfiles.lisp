@@ -292,16 +292,13 @@ ready to be manipulated on the Lisp side.
 See `serialize' for the reverse action."))
 
 (defmethod deserialize :around ((profile profile) (file file) stream &key)
-  "Don't try deserialize if there is no file.
-Handle errors gracefully.  See `on-deserialization-error'."
+  "Handle errors gracefully.  See `on-deserialization-error'."
   (declare (ignore stream))
-  (let ((path (expand file)))
-    (unless (nil-pathname-p path)
-      (handler-bind ((error (auto-restarter (on-deserialization-error file))))
-        (let ((result (call-next-method)))
-          (if (streamp result)
-              (alex:read-stream-content-into-string result)
-              result))))))
+  (handler-bind ((error (auto-restarter (on-deserialization-error file))))
+    (let ((result (call-next-method)))
+      (if (streamp result)
+          (alex:read-stream-content-into-string result)
+          result))))
 
 (defmethod deserialize ((profile profile) (file lisp-file) stream &key)
   (declare (ignore stream))
