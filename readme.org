@@ -23,6 +23,8 @@ particular user-centric files like configuration files.
 - Profile support.
 - On read error, existing files are backed up.
 - On write error, no file is written to disk, the existing file is preserved.
+- A =remote-file= can point to a URL which they automatically download if the
+  local file is not found.
 
 ** Motivation
 
@@ -75,6 +77,16 @@ body:
     (setf content (serapeum:string-replace "file" content "config")))
 #+end_src
 
+The =with-paths= helper allows for let-style bindings of the expanded paths:
+
+#+begin_src lisp
+  (let ((file1 (make-instance 'nfiles:file))
+        (file2 (make-instance 'nfiles:file :base-path "alt")))
+    (nfiles:with-paths ((path1 file1)
+                        (path2 file2))
+      (list path1 path2)))
+#+end_src
+
 The tests contain more useful examples.
 
 ** Configuration
@@ -103,6 +115,15 @@ The specialization methods are divided into the following:
 - =read-file= and =write-file=: This is how the file is read and written to
   disk.  These functions are responsible for calling the =deserialize= and
   =serialize= methods.
+
+- =fetch=: This generic function is only called for =remote-file= objects.  You
+  _must_ define its methods.  It does not have any method by default so as to
+  not burden Nfiles with undesirable dependencies.
+
+- =check=: Like =fetch=, this generic function is only called for =remote-file=
+  objects to test the integrity of the downloaded file.  You _must_ define its
+  methods.  It does not have any method by default so as to not burden Nfiles
+  with undesirable dependencies.
 
 ** Conditions and restarts
 
