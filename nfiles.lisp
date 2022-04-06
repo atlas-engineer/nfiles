@@ -178,8 +178,20 @@ If 0, disable automatic re-download.")
    ;;             :documentation "Function to call against the `url-content'.
    ;; This probably only makes sense for immutable data, thus `update-interval' ought to be 0.
    ;; It is expected to return T if it matches `checksum', NIL otherwise.")
-   ;; (checksum )
-   )
+   (checksum
+    ""
+    :type string
+    :documentation "If non-empty, the `check' method is called on download against the resulting data.
+If it does not matches the `checksum', raise an error.
+This probably only makes sense for immutable data, thus `update-interval' ought to be 0.")
+   (on-invalid-checksum
+    'ask
+    :type (member ask ignore-checksum discard)
+    :documentation "What to do when the downloaded content does not match `checksum'.")
+   (on-fetch-error
+    'ask
+    :type (member ask)                  ; TODO: Can't put `retry' here, lest it would loop.  What else?
+    :documentation "What to do when the file download failed."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
@@ -427,6 +439,30 @@ The file is guaranteed to not conflict with any existing file."
 (defgeneric fetch (profile file  &key &allow-other-keys)
   (:documentation "Download the FILE `url' and return the result as a string."))
 
+(export-always 'check)
+(defgeneric check (profile file content &key &allow-other-keys)
+  (:documentation "Check CONTENT when FILE's `checksum' is non-empty.
+This is meant to return a string which is then automatically compared to `checksum'."))
+
+(defmethod check :around ((profile profile) (file file) content &key)
+  (if (uiop:emptyp (checksum file))
+      content
+      (let ((wrong-checksum ""))
+        (restart-case (handler-bind ((invalid-checksum (auto-restarter (on-invalid-checksum file))))
+                        (let ((checksum (call-next-method profile file content)))
+                          (setf wrong-checksum checksum)
+                          (if (string= checksum (checksum file))
+                              content
+                              (error 'invalid-checksum :path (expand file)
+                                                       :wanted-checksum (checksum file)
+                                                       :wrong-checksum checksum))))
+          (ignore-checksum ()
+            (warn "Bad checksum ~s, expected ~s"
+                  wrong-checksum (checksum file))
+            content)
+          (discard ()
+            "")))))
+
 (export-always 'read-file)
 (defgeneric read-file (profile file &key &allow-other-keys)
   (:documentation "Load FILE by calling `deserialize' on a stream opened on the file.
@@ -469,16 +505,19 @@ If file is already on disk and younger then `update-interval', call next
                  (when (/= 0 (update-interval file))
                    (< (update-interval file)
                       (- (get-universal-time) (uiop:safe-file-write-date path))))))
-        (handler-case (let ((content (fetch profile file)))
-                        (setf (url-content file) content)
-                        (setf (slot-value file 'last-update) (get-universal-time))
-                        (with-input-from-string (stream content)
-                          (deserialize profile file stream)))
-          ;; TODO: Make download errors customizable.
-          (t (c)
-            (error "Error during ~s download: ~a"
-                   (quri:render-uri (url file))
-                   c)))
+        ;; We bind the handler against `T' because some networking library raise non-error conditions.
+        (restart-case (handler-bind ((t (auto-restarter (on-fetch-error file))))
+                        (let ((content (fetch profile file)))
+                          (unless (uiop:emptyp (checksum file))
+                            (setf content (check profile file content)))
+                          (unless (uiop:emptyp content)
+                            (setf (url-content file) content)
+                            (setf (slot-value file 'last-update) (get-universal-time))
+                            (with-input-from-string (stream content)
+                              (deserialize profile file stream)))))
+          (retry ()
+            (read-file profile file)))
+
         (call-next-method))))
 
 (defmethod read-file ((profile profile) (file file) &key)

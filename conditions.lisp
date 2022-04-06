@@ -17,3 +17,24 @@
                (format stream "Command~%~s~%failed with~%~s"
                        (uiop:subprocess-error-command c)
                        (slot-value c 'message))))))
+
+(export-always 'invalid-checksum)
+(define-condition invalid-checksum (error)
+  ((path :initarg :path)
+   (wanted-checksum :initarg :wanted-checksum)
+   (wrong-checksum :initarg :wrong-checksum))
+  (:report (lambda (c stream)
+             (let ((*print-pretty* nil))
+               (format stream "File ~s expected checksum~%~s~%  but has~%~s"
+                       (slot-value c 'path)
+                       (slot-value c 'wanted-checksum)
+                       (slot-value c 'wrong-checksum))))))
+
+(export-always 'fetch-error)
+(define-condition fetch-error (error)
+  ((url :initarg :url)
+   (message :initarg :message))
+  (:report (lambda (c stream)
+             (format stream "URL ~s could not be fetched: ~a"
+                     (slot-value c 'url)
+                     (slot-value c 'message)))))
