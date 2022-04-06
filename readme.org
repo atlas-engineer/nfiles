@@ -60,7 +60,7 @@ A basic session:
 (nfiles:expand *config-file*)
 ; => #P"/home/johndoe/.config/my-app/init.lisp"
 
-(setf (nfiles:content *config-file*) "Hello file!")
+(setf (nfiles:content *config-file*) "Hello file!") ; The file is written to disk.
 
 (nfiles:content *config-file*)
 ; => "Hello file!"
@@ -79,7 +79,7 @@ The tests contain more useful examples.
 
 ** Configuration
 
-NFiles was designed with configurability in mind.  All configuration happens via
+NFiles was designed with configurability in mind.  All configuration happens through
 subclassing of the =file= and =profile= classes together with method
 specialization.
 
@@ -111,6 +111,9 @@ provide for interactive and customizable behaviour:
 
 - =external-modification=: The file was modified externally.  See the
   =on-external-modification= slot to automate what to do in this case.
+
+- Read error resetarts can also customized, see the =on-read-error= slot to
+  automate what to do in this case.
 
 - =process-error=: This may be raise for instance when =gpg= fails to encrypt.
   The =use-recipient= restart is provided to retry with the given recipient.
