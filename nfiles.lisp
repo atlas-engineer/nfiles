@@ -150,6 +150,44 @@ same content.
 To disable content-sharing for specific `file', have their `resolve' method
 return `uiop:*nil-pathname*'."))
 
+(defclass* remote-file (file)
+  ((url
+    (quri:uri "")
+    :type quri:uri
+    :documentation "URL from where to download the file.
+If empty, then this behaves just like a regular `file'.")
+   (url-content
+    ""
+    :type string
+    :documentation "The content of the downloaded file.
+This is useful if you want to maintain both the raw content and the deserialized
+content.")
+   (last-update
+    (get-universal-time)                ; TODO: 0?
+    :type unsigned-byte
+    :writer nil
+    :documentation "Last time the file was downloaded.")
+   (update-interval
+    0
+    :type unsigned-byte
+    :documentation "Re-download the file after this amount of seconds has
+elapsed since last update.
+If 0, disable automatic re-download.")
+   ;;    (checker nil ; TODO: implement?  Don't include it in the main package, only in the test package.
+   ;;             :type (or null  (function (string) boolean))
+   ;;             :documentation "Function to call against the `url-content'.
+   ;; This probably only makes sense for immutable data, thus `update-interval' ought to be 0.
+   ;; It is expected to return T if it matches `checksum', NIL otherwise.")
+   ;; (checksum )
+   )
+  (:export-class-name-p t)
+  (:export-accessor-names-p t)
+  (:accessor-name-transformer (class*:make-name-transformer name))
+  (:documentation "File which can be found on a remote system or online.
+
+If the local find is not found, then an attempt is made at downloading the file
+using `fetcher'."))
+
 (defvar *index* (tg:make-weak-hash-table :weakness :key :test 'equal)
   "Set of all `file's objects.
 It's a weak hash table to that garbage-collected files are automatically
@@ -302,6 +340,15 @@ See `deserialize' for the reverse action."))
   (declare (ignore stream))
   nil)
 
+(defvar *content-override* nil          ; FIXME: Hack, can we do better?
+  "Implementation detail.
+This is used by `remote-file' to write content to disk when the `cache-entry' is
+initialized, without looping indefinitely.")
+(defvar *cache-entry-override* nil          ; FIXME: Hack, can we do better?
+  "Implementation detail.
+This is used by `remote-file' to write content to disk when the `cache-entry' is
+initialized, without looping indefinitely.")
+
 (export-always 'write-file)
 (defgeneric write-file (profile file &key destination &allow-other-keys)
   (:documentation "Persist FILE to disk.
@@ -315,7 +362,7 @@ See `read-file' for the reverse action."))
 (defmethod write-file :around ((profile profile) (file file) &key destination)
   (declare (ignore destination))
   (unless (nil-pathname-p (expand file))
-    (let ((entry (cache-entry file)))
+    (let ((entry (or *cache-entry-override* (cache-entry file))))
       ;; It's important to fetch the entry before we write to avoid a cache miss.
       (let* ((path (expand file))
              (destination path)
@@ -379,6 +426,10 @@ The file is guaranteed to not conflict with any existing file."
     (uiop:rename-file-overwriting-target path temp-path)
     temp-path))
 
+(export-always 'fetch)
+(defgeneric fetch (profile file  &key &allow-other-keys)
+  (:documentation "Download the FILE `url' and return the result as a string."))
+
 (export-always 'read-file)
 (defgeneric read-file (profile file &key &allow-other-keys)
   (:documentation "Load FILE by calling `deserialize' on a stream opened on the file.
@@ -397,6 +448,41 @@ See `write-file' for the reverse action."))
         (delete ()
           (uiop:delete-file-if-exists path)
           nil)))))
+
+(-> url-empty-p ((or quri:uri string null)) boolean)
+(defun url-empty-p (url)
+  "Small convenience function to check whether the given URL is empty."
+  (the (values boolean &optional)
+       (uiop:emptyp (if (quri:uri-p url) (quri:render-uri url) url))))
+
+(defmethod read-file :around ((profile profile) (file remote-file) &key force-update)
+  ;; Must be an `:around' method to overrule the `nfiles:file' specialization
+  ;; which does file existence check.
+  "Try to download the file from its `url' if it does not exist.
+
+If file is already on disk and younger then `update-interval', call next
+`read-file' method instead of fetching online."
+  (let ((path (expand file)))
+    (if (and (not (url-empty-p (url file)))
+             (or force-update
+                 (when (/= 0 (update-interval file))
+                   (< (update-interval file)
+                      (- (get-universal-time) (last-update file))))
+                 (not (uiop:file-exists-p path))
+                 (when (/= 0 (update-interval file))
+                   (< (update-interval file)
+                      (- (get-universal-time) (uiop:safe-file-write-date path))))))
+        (handler-case (let ((content (fetch profile file)))
+                        (setf (url-content file) content)
+                        (setf (slot-value file 'last-update) (get-universal-time))
+                        (with-input-from-string (stream content)
+                          (deserialize profile file stream)))
+          ;; TODO: Make download errors customizable.
+          (t (c)
+            (error "Error during ~s download: ~a"
+                   (quri:render-uri (url file))
+                   c)))
+        (call-next-method))))
 
 (defmethod read-file ((profile profile) (file file) &key)
   "Open FILE and call `deserialize' on its content."
@@ -463,10 +549,19 @@ entry's `cached-value'. ")
                    :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
                    :name ,name))
 
-(defmethod initialize-instance :after ((entry cache-entry) &key)
+(defmethod initialize-instance :after ((entry cache-entry) &key force-update)
   (setf (cached-value entry)
         (prog1 (run-thread "NFiles reader" (read-handler (source-file entry))
-                 (read-file (profile (source-file entry)) (source-file entry)))
+                 (let ((value (read-file (profile (source-file entry)) (source-file entry) :force-update force-update)))
+                   (when (typep (source-file entry) 'remote-file)
+                     ;; If the file content is never set, then the `write-file'
+                     ;; method is not called; however we want to persist the
+                     ;; file for `remote-file' regardless, so we force a write
+                     ;; here.
+                     (let ((*content-override* value)
+                           (*cache-entry-override* entry))
+                       (write-file (profile (source-file entry)) (source-file entry))))
+                   value))
           (setf (last-update entry) (get-universal-time)))))
 
 (defvar *cache* (sera:dict)
@@ -481,13 +576,14 @@ entry's `cached-value'. ")
         file
         (uiop:native-namestring path))))
 
-(defun cache-entry (file &optional force-read)
+(defun cache-entry (file &optional force-read force-update)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
     (let* ((path (expand file))
            (key (file-key file)))
       (if (and (not (nil-pathname-p path))
                (or force-read
+                   force-update
                    (alex:when-let ((entry (gethash key *cache*)))
                      (restart-case (handler-bind ((external-modification (auto-restarter (on-external-modification file))))
                                      (sera:synchronized (entry)
@@ -501,44 +597,46 @@ entry's `cached-value'. ")
                          (sera:synchronized (entry)
                            (write-cache-entry file entry))
                          nil)))))
-          (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file))
+          (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file :force-update force-update))
           (alex:ensure-gethash key
                                *cache*
-                               (make-instance 'cache-entry :source-file file))))))
+                               (make-instance 'cache-entry :source-file file :force-update force-update))))))
 
 (export-always 'content)
-(-> content (file &key (:force-read boolean) (:wait-p boolean)) t)
-(defun content (file &key force-read (wait-p t))
+(-> content (file &key (:force-read boolean) (:force-update boolean) (:wait-p boolean)) t)
+(defun content (file &key force-read force-update (wait-p t))
   "Return the content of FILE.
 When FORCE-READ is non-nil, the cache is skipped and the file is re-read.
+When FORCE-UPDATE is non-nil, the file is re-downloaded if it's a `remote-file'.
 
 The read is asynchronous.  By default, `content' waits for the read to finish
 before returning the result.  But if `wait-p' is nil, it returns directly
 with (VALUES NIL THREAD) if the reading THREAD is not done yet."
-  (let ((entry (cache-entry file force-read)))
-    ;; WARNING: We don't lock `entry' when joining thread to avoid a dead lock.
-    (let ((value (sera:synchronized (entry)
-                   (cached-value entry))))
-      (if (and (bt:threadp value)
-               (or wait-p (not (bt:thread-alive-p value))))
-          ;; Thread may be aborted, so we wrap with  `ignore-errors'.
-          (multiple-value-bind (result error)
-              (ignore-errors (bt:join-thread value))
-            (if (or error
-                    (typep result 'condition))
-                (progn
-                  (sera:synchronized (*cache*)
-                    (remhash (file-key file) *cache*))
-                  (values nil (or error result)))
-                (progn
-                  (sera:synchronized (entry)
-                    (setf (cached-value entry) result))
-                  (values result nil))))
+  (or *content-override*
+      (let ((entry (cache-entry file force-read force-update)))
+        ;; WARNING: We don't lock `entry' when joining thread to avoid a dead lock.
+        (let ((value (sera:synchronized (entry)
+                       (cached-value entry))))
+          (if (and (bt:threadp value)
+                   (or wait-p (not (bt:thread-alive-p value))))
+              ;; Thread may be aborted, so we wrap with  `ignore-errors'.
+              (multiple-value-bind (result error)
+                  (ignore-errors (bt:join-thread value))
+                (if (or error
+                        (typep result 'condition))
+                    (progn
+                      (sera:synchronized (*cache*)
+                        (remhash (file-key file) *cache*))
+                      (values nil (or error result)))
+                    (progn
+                      (sera:synchronized (entry)
+                        (setf (cached-value entry) result))
+                      (values result nil))))
 
-          (sera:synchronized (entry)
-            (if (bt:threadp value)
-                (values nil value)
-                (values value nil)))))))
+              (sera:synchronized (entry)
+                (if (bt:threadp value)
+                    (values nil value)
+                    (values value nil))))))))
 
 (defun drain-semaphore (semaphore &optional timeout)
   "Decrement the semaphore counter down to 0.

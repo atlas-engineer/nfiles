@@ -12,6 +12,7 @@
                hu.dwim.defclass-star
                #-sbcl
                iolib/os
+               quri
                serapeum
                trivial-garbage
                trivial-package-local-nicknames
