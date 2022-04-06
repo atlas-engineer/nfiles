@@ -117,9 +117,7 @@
         nil)))
 
 (subtest "Symlinks"
-  (uiop:with-current-directory ((uiop:merge-pathnames*
-                                 "test-data"
-                                 (asdf:system-source-directory (asdf:find-system :nfiles))))
+  (uiop:with-current-directory ((asdf:system-relative-pathname :nfiles "test-data"))
 
     (let ((file (make-instance 'nfiles:file :base-path #p"link-to-dummy")))
       (is (nfiles:expand file)
@@ -168,10 +166,10 @@
 (defclass* counter-file (nfiles:file)
     ((write-count
       0
-      :type integer)
+      :type unsigned-byte)
      (read-count
       0
-      :type integer))
+      :type unsigned-byte))
     (:accessor-name-transformer (class*:make-name-transformer name)))
 
 (defmethod nfiles:write-file ((profile nfiles:profile) (file counter-file) &key)
