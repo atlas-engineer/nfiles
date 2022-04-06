@@ -441,7 +441,7 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
 entry's `cached-value'. ")
    (last-update
     (get-universal-time)
-    :type integer
+    :type unsigned-byte
     :documentation "The date at which the cache entry was last updated.")
    (cached-value
     nil
