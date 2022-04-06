@@ -441,4 +441,49 @@
       (is (nfiles:permissions (nfiles:expand file))
           permissions))))
 
+(defun local-fetcher (uri)
+  (serapeum:trim-whitespace
+   (alexandria:read-file-into-string (quri:uri-file-pathname uri))))
+
+(defclass* remote-counter-file (counter-file nfiles:remote-file)
+  ((download-count
+    0
+    :type unsigned-byte))
+  (:accessor-name-transformer (class*:make-name-transformer name)))
+
+(defmethod nfiles:fetch ((profile nfiles:profile) (file remote-counter-file) &key)
+  (incf (download-count file))
+  (local-fetcher (nfiles:url file)))
+
+(defvar *remote-file-url* (quri.uri.file:make-uri-file :path (asdf:system-relative-pathname :nfiles "test-data/dummy")))
+
+(nfile-test "Remote file test"
+  (let ((file (make-instance 'remote-counter-file
+                             :base-path #p"local-dummy"
+                             :url *remote-file-url*))
+        (test-content "Dummy file."))
+    (is (nfiles:content file)
+        test-content)
+    (ok (uiop:file-exists-p (nfiles:expand file)))
+    (is (download-count file) 1)
+    (nfiles::clear-cache)
+    (is (nfiles:content file)
+        test-content)
+    (is (download-count file) 1)))
+
+(nfile-test "Remote file test: always download"
+  (let ((file (make-instance 'remote-counter-file
+                             :base-path #p""
+                             :url *remote-file-url*))
+        (test-content "Dummy file."))
+    (is (nfiles:content file)
+        test-content)
+    (is (uiop:file-exists-p (nfiles:expand file))
+        nil)
+    (is (download-count file) 1)
+    (nfiles::clear-cache)
+    (is (nfiles:content file)
+        test-content)
+    (is (download-count file) 2)))
+
 (finalize)
