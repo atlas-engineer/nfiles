@@ -455,6 +455,10 @@
   (incf (download-count file))
   (local-fetcher (nfiles:url file)))
 
+(defmethod nfiles:check ((profile nfiles:profile) (file remote-counter-file) content &key)
+  "Terrible and insecure checker, only for testing purposes, don't use it."
+  (write-to-string (length content)))
+
 (defvar *remote-file-url* (quri.uri.file:make-uri-file :path (asdf:system-relative-pathname :nfiles "test-data/dummy")))
 
 (nfile-test "Remote file test"
@@ -485,5 +489,24 @@
     (is (nfiles:content file)
         test-content)
     (is (download-count file) 2)))
+
+(nfile-test "Remote file checksum test"
+  (let* ((test-content "Dummy file.")
+         (file (make-instance 'remote-counter-file
+                              :base-path #p"local-dummy"
+                              :url *remote-file-url*
+                              :checksum (write-to-string (length test-content)))))
+    (is (nfiles:content file)
+        test-content))
+  (let* ((test-content "Dummy file.")
+         (file (make-instance 'remote-counter-file
+                              :on-invalid-checksum
+                              :base-path #p"local-dummy2"
+                              :url *remote-file-url*
+                              :checksum (write-to-string (1+ (length test-content))))))
+    (is-error (nfiles:content file)
+                  nfiles:invalid-checksum)
+    (is-error (nfiles:content file)
+              invalid-checksum)))
 
 (finalize)
