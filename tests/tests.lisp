@@ -529,11 +529,34 @@
         (nfiles:content file)
       (is value nil)
       (is (download-count file) 1))
-    (setf (slot-value file 'nfiles:checksum) (write-to-string (length test-content)))
+    (setf (nfiles:checksum file) (write-to-string (length test-content)))
     (is (nfiles:content file)
         test-content)
     (is (download-count file) 2)))
 
-;; TODO: Test `force-update', `update-interval'.
+(nfile-test "Remote file auto-update test"
+  (let* ((test-content "Remote file.")
+         (test-content2 "Altered file.")
+         (test-content3 "Changed file.")
+         (remote-file "remote.file")
+         (file (make-instance 'remote-counter-file
+                              :base-path #p"local-dummy"
+                              :url (quri.uri.file:make-uri-file :path remote-file))))
+    (alexandria:write-string-into-file test-content remote-file :if-exists :supersede)
+    (is (nfiles:content file)
+        test-content)
+    (alexandria:write-string-into-file test-content2 remote-file :if-exists :supersede)
+    (is (nfiles:content file)
+        test-content)
+    (is (nfiles:content file
+                        :force-update t)
+        test-content2)
+    (alexandria:write-string-into-file test-content3 remote-file :if-exists :supersede)
+    (setf (nfiles:update-interval file) 1)
+    (is (nfiles:content file)
+        test-content2)
+    (sleep 2)
+    (is (nfiles:content file)
+        test-content3)))
 
 (finalize)

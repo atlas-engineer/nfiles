@@ -489,6 +489,19 @@ See `write-file' for the reverse action."))
   (the (values boolean &optional)
        (uiop:emptyp (if (quri:uri-p url) (quri:render-uri url) url))))
 
+(defun updatable-p (file)
+  (when (typep file 'remote-file)
+    (or
+     (when (< 0 (update-interval file))
+       (< (update-interval file)
+          (- (get-universal-time) (last-update file))))
+     (let ((path (expand file)))
+       (or
+        (not (uiop:file-exists-p path))
+        (when (< 0 (update-interval file))
+          (< (update-interval file)
+             (- (get-universal-time) (uiop:safe-file-write-date path)))))))))
+
 (defmethod read-file :around ((profile profile) (file remote-file) &key force-update)
   ;; Must be an `:around' method to overrule the `nfiles:file' specialization
   ;; which does file existence check.
@@ -496,30 +509,23 @@ See `write-file' for the reverse action."))
 
 If file is already on disk and younger than `update-interval', call next
 `read-file' method instead of fetching online."
-  (let ((path (expand file)))
-    (if (and (not (url-empty-p (url file)))
-             (or force-update
-                 (when (< 0 (update-interval file))
-                   (< (update-interval file)
-                      (- (get-universal-time) (last-update file))))
-                 (not (uiop:file-exists-p path))
-                 (when (< 0 (update-interval file))
-                   (< (update-interval file)
-                      (- (get-universal-time) (uiop:safe-file-write-date path))))))
-        ;; We bind the handler against `T' because some networking library raise non-error conditions.
-        (restart-case (handler-bind ((t (auto-restarter (on-fetch-error file))))
-                        (let ((content (fetch profile file)))
-                          (unless (uiop:emptyp (checksum file))
-                            (setf content (check profile file content)))
-                          (unless (uiop:emptyp content)
-                            (setf (url-content file) content)
-                            (setf (slot-value file 'last-update) (get-universal-time))
-                            (with-input-from-string (stream content)
-                              (deserialize profile file stream)))))
-          (retry ()
-            (read-file profile file)))
+  (if (and (not (url-empty-p (url file)))
+           (or force-update
+               (updatable-p file)))
+      ;; We bind the handler against `T' because some networking library raise non-error conditions.
+      (restart-case (handler-bind ((t (auto-restarter (on-fetch-error file))))
+                      (let ((content (fetch profile file)))
+                        (unless (uiop:emptyp (checksum file))
+                          (setf content (check profile file content)))
+                        (unless (uiop:emptyp content)
+                          (setf (url-content file) content)
+                          (setf (slot-value file 'last-update) (get-universal-time))
+                          (with-input-from-string (stream content)
+                            (deserialize profile file stream)))))
+        (retry ()
+          (read-file profile file)))
 
-        (call-next-method))))
+      (call-next-method)))
 
 (defmethod read-file ((profile profile) (file file) &key)
   "Open FILE and call `deserialize' on its content."
@@ -617,7 +623,10 @@ entry's `cached-value'. ")
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
     (let* ((path (expand file))
-           (key (file-key file)))
+           (key (file-key file))
+           ;; This `force-update' settings saves us from calling `updatable-p'
+           ;; again in `read-file'.
+           (force-update (or force-update (updatable-p file))))
       (if (and (not (nil-pathname-p path))
                (or force-read
                    force-update
