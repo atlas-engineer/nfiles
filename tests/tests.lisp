@@ -116,6 +116,15 @@
                  (mapcar #'pathname-name (uiop:directory-files *test-dir*)))
         nil)))
 
+(nfile-test "File without base-path / directory as path"
+  (let ((test-content "foo")
+        (file (make-instance 'nfiles:file)))
+    (setf (nfiles:content file) test-content)
+    (is (uiop:file-exists-p (nfiles:expand file))
+        nil)
+    (is (nfiles:content file)
+        test-content)))
+
 (subtest "Symlinks"
   (uiop:with-current-directory ((asdf:system-relative-pathname :nfiles "test-data"))
 

@@ -370,30 +370,34 @@ This guarantees that on error the original file is left untouched.
 See `read-file' for the reverse action."))
 
 (defmethod write-file :around ((profile profile) (file file) &key destination)
+  "Perform some checks before performing the actual write:
+- Preserve permissions.
+- If FILE expands to `uiop:*nil-pathname*' or a directory, do nothing."
   (declare (ignore destination))
-  (unless (nil-pathname-p (expand file))
-    (let ((entry (or *cache-entry-override* (cache-entry file))))
-      ;; It's important to fetch the entry before we write to avoid a cache miss.
-      (let* ((path (expand file))
-             (destination path)
-             (exists? (uiop:file-exists-p path))
-             (permissions nil)
-             (user nil)
-             (group nil))
-        (when exists?
-          (setf
-           permissions (permissions path)
-           user (file-user path)
-           group (file-group path)))
-        (uiop:with-staging-pathname (destination)
-          (call-next-method profile file :destination destination))
-        (when exists?
-          (setf
-           (permissions path) permissions
-           (file-user path) user
-           (file-group path) group)))
-      (sera:synchronized (entry)
-        (setf (last-update entry) (get-universal-time))))))
+  (let ((path (expand file)))
+    (unless (or (nil-pathname-p path)
+                (directory-pathname-p path))
+      (let ((entry (or *cache-entry-override* (cache-entry file))))
+        ;; It's important to fetch the entry before we write to avoid a cache miss.
+        (let* ((destination path)
+               (exists? (uiop:file-exists-p path))
+               (permissions nil)
+               (user nil)
+               (group nil))
+          (when exists?
+            (setf
+             permissions (permissions path)
+             user (file-user path)
+             group (file-group path)))
+          (uiop:with-staging-pathname (destination)
+            (call-next-method profile file :destination destination))
+          (when exists?
+            (setf
+             (permissions path) permissions
+             (file-user path) user
+             (file-group path) group)))
+        (sera:synchronized (entry)
+          (setf (last-update entry) (get-universal-time)))))))
 
 (defmethod write-file ((profile profile) (file file) &key destination)
   "Write the result of `serialize' to the `file' path."
