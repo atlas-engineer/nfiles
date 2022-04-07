@@ -31,7 +31,7 @@ Subclass this profile to make your own, possibly carrying more data.
 
 (defclass* file ()
   ((base-path
-    #p"."
+    #p"." ; Current directory by default, so that path merging does the right thing.
     :type pathname
     :export t
     :initarg nil

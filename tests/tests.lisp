@@ -475,6 +475,20 @@
         test-content)
     (is (download-count file) 1)))
 
+(nfile-test "Remote file in-memory"
+  (let ((file (make-instance 'remote-counter-file
+                             :base-path #p""
+                             :url *remote-file-url*))
+        (test-content "Dummy file."))
+    (is (nfiles:content file)
+        test-content)
+    (is (uiop:file-exists-p (nfiles:expand file))
+        nil)
+    (is (download-count file) 1)
+    (is (nfiles:content file)
+        test-content)
+    (is (download-count file) 1)))
+
 (nfile-test "Remote file test: always download"
   (let ((file (make-instance 'remote-counter-file
                              :base-path #p""
