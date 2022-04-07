@@ -166,7 +166,7 @@ content.")
    (last-update
     (get-universal-time)                ; TODO: 0?
     :type unsigned-byte
-    :writer nil
+    :reader t
     :documentation "Last time the file was downloaded.")
    (update-interval
     0
@@ -499,11 +499,11 @@ If file is already on disk and younger than `update-interval', call next
   (let ((path (expand file)))
     (if (and (not (url-empty-p (url file)))
              (or force-update
-                 (when (/= 0 (update-interval file))
+                 (when (< 0 (update-interval file))
                    (< (update-interval file)
                       (- (get-universal-time) (last-update file))))
                  (not (uiop:file-exists-p path))
-                 (when (/= 0 (update-interval file))
+                 (when (< 0 (update-interval file))
                    (< (update-interval file)
                       (- (get-universal-time) (uiop:safe-file-write-date path))))))
         ;; We bind the handler against `T' because some networking library raise non-error conditions.
