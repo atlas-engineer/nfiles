@@ -89,6 +89,7 @@ The `name' slot can be used to refer to `file' objects in a human-readable fashi
 
 (export-always '(ask reload overwrite))
 (export-always '(ask backup delete))
+(export-always '(ask ignore-checksum discard))
 
 (defclass* lisp-file (file)
   ()
@@ -461,7 +462,7 @@ This is meant to return a string which is then automatically compared to `checks
                   wrong-checksum (checksum file))
             content)
           (discard ()
-            "")))))
+            (error 'read-error))))))
 
 (export-always 'read-file)
 (defgeneric read-file (profile file &key &allow-other-keys)
@@ -493,7 +494,7 @@ See `write-file' for the reverse action."))
   ;; which does file existence check.
   "Try to download the file from its `url' if it does not exist.
 
-If file is already on disk and younger then `update-interval', call next
+If file is already on disk and younger than `update-interval', call next
 `read-file' method instead of fetching online."
   (let ((path (expand file)))
     (if (and (not (url-empty-p (url file)))
@@ -580,7 +581,7 @@ entry's `cached-value'. ")
   `(bt:make-thread (lambda ()
                      (restart-case (handler-bind ((error ,handler))
                                      ,@body)
-                       (forward-condition (c)
+                       (forward-condition (&optional c)
                          c)))
                    :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
                    :name ,name))

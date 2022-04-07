@@ -493,6 +493,8 @@
 (nfile-test "Remote file checksum test"
   (let* ((test-content "Dummy file.")
          (file (make-instance 'remote-counter-file
+                              :read-handler (lambda (c)
+                                              (invoke-restart 'nfiles::forward-condition c))
                               :base-path #p"local-dummy"
                               :url *remote-file-url*
                               :checksum (write-to-string (length test-content)))))
@@ -500,13 +502,38 @@
         test-content))
   (let* ((test-content "Dummy file.")
          (file (make-instance 'remote-counter-file
-                              :on-invalid-checksum
+                              :read-handler (lambda (c)
+                                              (invoke-restart 'nfiles::forward-condition c))
                               :base-path #p"local-dummy2"
                               :url *remote-file-url*
                               :checksum (write-to-string (1+ (length test-content))))))
-    (is-error (nfiles:content file)
-                  nfiles:invalid-checksum)
-    (is-error (nfiles:content file)
-              invalid-checksum)))
+    (multiple-value-bind (value error)
+        (nfiles:content file)
+      (is value nil)
+      (is-error error nfiles:invalid-checksum)
+      (is (download-count file) 1))
+    (multiple-value-bind (value error)
+        (nfiles:content file)
+      (is value nil)
+      (is-error error nfiles:invalid-checksum)
+      (is (download-count file) 2)))
+  (let* ((test-content "Dummy file.")
+         (file (make-instance 'remote-counter-file
+                              :read-handler (lambda (c)
+                                              (invoke-restart 'nfiles::forward-condition c))
+                              :on-invalid-checksum 'nfiles:discard
+                              :base-path #p"local-dummy3"
+                              :url *remote-file-url*
+                              :checksum (write-to-string (1+ (length test-content))))))
+    (multiple-value-bind (value error)
+        (nfiles:content file)
+      (is value nil)
+      (is (download-count file) 1))
+    (setf (slot-value file 'nfiles:checksum) (write-to-string (length test-content)))
+    (is (nfiles:content file)
+        test-content)
+    (is (download-count file) 2)))
+
+;; TODO: Test `force-update', `update-interval'.
 
 (finalize)

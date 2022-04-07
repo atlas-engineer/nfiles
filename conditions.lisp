@@ -18,6 +18,10 @@
                        (uiop:subprocess-error-command c)
                        (slot-value c 'message))))))
 
+(define-condition read-error (error)
+  ()
+  (:documentation "This condition is used internally to cancel a file read."))
+
 (export-always 'invalid-checksum)
 (define-condition invalid-checksum (error)
   ((path :initarg :path)
