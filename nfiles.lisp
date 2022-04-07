@@ -502,15 +502,19 @@ See `write-file' for the reverse action."))
           (< (update-interval file)
              (- (get-universal-time) (uiop:safe-file-write-date path)))))))))
 
-(defmethod read-file :around ((profile profile) (file remote-file) &key force-update)
+(defmethod read-file :around ((profile profile) (file remote-file) &key force-update skip-update)
   ;; Must be an `:around' method to overrule the `nfiles:file' specialization
   ;; which does file existence check.
   "Try to download the file from its `url' if it does not exist.
 
 If file is already on disk and younger than `update-interval', call next
 `read-file' method instead of fetching online."
-  (if (and (not (url-empty-p (url file)))
+  (when (and force-update skip-update)
+    (warn "Both FORCE-UPDATE and SKIP-UPDATE specified, opting to force update."))
+  (if (and (not skip-update)
+           (not (url-empty-p (url file)))
            (or force-update
+               (not (exists-p file))
                (updatable-p file)))
       ;; We bind the handler against `T' because some networking library raise non-error conditions.
       (restart-case (handler-bind ((t (auto-restarter (on-fetch-error file))))
@@ -597,10 +601,12 @@ entry's `cached-value'. ")
                    :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
                    :name ,name))
 
-(defmethod initialize-instance :after ((entry cache-entry) &key force-update)
+(defmethod initialize-instance :after ((entry cache-entry) &key force-update skip-update)
   (setf (cached-value entry)
         (prog1 (run-thread "NFiles reader" (read-handler (source-file entry))
-                 (let ((value (read-file (profile (source-file entry)) (source-file entry) :force-update force-update)))
+                 (let ((value (read-file (profile (source-file entry)) (source-file entry)
+                                         :force-update force-update
+                                         :skip-update skip-update)))
                    (when (typep (source-file entry) 'remote-file)
                      ;; If the file content is never set, then the `write-file'
                      ;; method is not called; however we want to persist the
@@ -624,14 +630,14 @@ entry's `cached-value'. ")
         file
         (uiop:native-namestring path))))
 
-(defun cache-entry (file &optional force-read force-update)
+(defun cache-entry (file &optional force-read force-update skip-update)
   "Files that expand to `uiop:*nil-pathname*' have their own cache entry."
   (sera:synchronized (*cache*)
     (let* ((path (expand file))
            (key (file-key file))
            ;; This `force-update' settings saves us from calling `updatable-p'
            ;; again in `read-file'.
-           (force-update (or force-update (updatable-p file))))
+           (force-update (or force-update (and (not skip-update) (updatable-p file)))))
       (if (and (not (nil-pathname-p path))
                (or force-read
                    force-update
@@ -648,23 +654,32 @@ entry's `cached-value'. ")
                          (sera:synchronized (entry)
                            (write-cache-entry file entry))
                          nil)))))
-          (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file :force-update force-update))
+          (setf (gethash key *cache*) (make-instance 'cache-entry :source-file file
+                                                                  :force-update force-update
+                                                                  :skip-update skip-update))
           (alex:ensure-gethash key
                                *cache*
-                               (make-instance 'cache-entry :source-file file :force-update force-update))))))
+                               (make-instance 'cache-entry :source-file file
+                                                           :force-update force-update
+                                                           :skip-update skip-update))))))
 
 (export-always 'content)
-(-> content (file &key (:force-read boolean) (:force-update boolean) (:wait-p boolean)) t)
-(defun content (file &key force-read force-update (wait-p t))
+(-> content (file &key (:force-read boolean)
+                  (:force-update boolean)
+                  (:skip-update boolean)
+                  (:wait-p boolean))
+    t)
+(defun content (file &key force-read force-update skip-update (wait-p t))
   "Return the content of FILE.
 When FORCE-READ is non-nil, the cache is skipped and the file is re-read.
 When FORCE-UPDATE is non-nil, the file is re-downloaded if it's a `remote-file'.
+When SKIP-UPDATE is non-nil, the file is not re-downloaded if it's present locally.
 
 The read is asynchronous.  By default, `content' waits for the read to finish
 before returning the result.  But if `wait-p' is nil, it returns directly
 with (VALUES NIL THREAD) if the reading THREAD is not done yet."
   (or *content-override*
-      (let ((entry (cache-entry file force-read force-update)))
+      (let ((entry (cache-entry file force-read force-update skip-update)))
         ;; WARNING: We don't lock `entry' when joining thread to avoid a dead lock.
         (let ((value (sera:synchronized (entry)
                        (cached-value entry))))
