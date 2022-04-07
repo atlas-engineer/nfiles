@@ -22,6 +22,14 @@
         nil
         type)))
 
+(export-always 'directory-pathname-p)
+(defun directory-pathname-p (pathname)
+  "Like `uiop:directory-pathname-p' but also return T if `pathname-name' is \".\"
+and check for existence."
+  (or (uiop:directory-pathname-p pathname)
+      (string= "." (pathname-name pathname))
+      (uiop:directory-exists-p pathname)))
+
 (export-always 'parent)
 (-> parent (pathname-designator) (or pathname-designator null))
 (defun parent (path)
