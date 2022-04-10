@@ -21,15 +21,15 @@ particular user-centric files like configuration files.
   =write= on it won't do anything in case there was no change since last write.
 - (*Experimental!*) On-the-fly PGP encryption.
 - Profile support.
-- On read error, existing files are backed up.
-- On write error, no file is written to disk, the existing file is preserved.
-- A =remote-file= can point to a URL which they automatically download if the
+- On read errors, existing files are backed up.
+- On write errors, no file is written to disk, the existing file is preserved.
+- A =remote-file= can point to a URL, which is automatically downloaded if the
   local file is not found.
 
 ** Motivation
 
-This package was developed after dealing with a pickle when delivering Common
-Lisp images: When an image is generated, path expansion may already be resolved
+This package was developed after dealing with a problem when delivering Common
+Lisp images: when an image is generated, path expansion may already be resolved
 and thus hard-coded within the image, which makes it unfit for delivery.
 Consider this:
 
@@ -97,7 +97,7 @@ specialization.
 
 All configuration methods are specialized against =profile= and =file= so that
 the user can easily *compose* the behaviour:
-- Profile-constomization impacts all files using that profile;
+- Profile-customization impacts all files using that profile;
 - File-customization impacts the files of that specific type (or subtype)
   regardless of their profile.
 
@@ -118,25 +118,25 @@ The specialization methods are divided into the following:
 
 - =fetch=: This generic function is only called for =remote-file= objects.  You
   _must_ define its methods.  It does not have any method by default so as to
-  not burden Nfiles with undesirable dependencies.
+  not burden NFiles with undesirable dependencies.
 
 - =check=: Like =fetch=, this generic function is only called for =remote-file=
   objects to test the integrity of the downloaded file.  You _must_ define its
-  methods.  It does not have any method by default so as to not burden Nfiles
+  methods.  It does not have any method by default so as to not burden NFiles
   with undesirable dependencies.
 
 ** Conditions and restarts
 
-Some nfiles-specific conditions are raised in case of exceptional situations to
+Some NFiles-specific conditions are raised in case of exceptional situations to
 provide for interactive and customizable behaviour:
 
 - =external-modification=: The file was modified externally.  See the
   =on-external-modification= slot to automate what to do in this case.
 
-- Read error resetarts can also customized, see the =on-read-error= slot to
+- Read error restarts can also customized, see the =on-read-error= slot to
   automate what to do in this case.
 
-- =process-error=: This may be raise for instance when =gpg= fails to encrypt.
+- =process-error=: This may be raised for instance when =gpg= fails to encrypt.
   The =use-recipient= restart is provided to retry with the given recipient.
 
 ** Platform support

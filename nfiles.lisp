@@ -13,7 +13,7 @@
   (:documentation "This is the default profile.
 Subclass this profile to make your own, possibly carrying more data.
 
-`file' path expansion is specialized against its `profile' slot throught the
+`file' path expansion is specialized against its `profile' slot through the
 `resolve' method."))
 
 (defclass* read-only-profile (profile)
@@ -71,8 +71,9 @@ since it was last loaded.")
     :type (member ask backup delete)
     :documentation "What to do on deserialization error.
 The offending file may be backed up with the `backup' function.
-Or it may simply be deleted.
-`ask' leaves the condition is unhandled, so unless you handle it it will prompt the debugger with the other options.")
+Or it may simply be `delete'd.
+`ask' leaves the condition unhandled, so unless you handle it, it will prompt
+the debugger with the other options.")
    (on-read-error
     'ask
     :type (member ask backup delete)
@@ -82,8 +83,8 @@ See `on-deserialization-error' for the meaning of the different actions."))
   (:export-accessor-names-p t)
   (:accessor-name-transformer (class*:make-name-transformer name))
   (:documentation "The main object to manipulate and subclass.
-The `profile' slot can be used to drive the specializations of multiple `file' methods.
-See `resolve', `serialize', `etc'.
+The `profile' slot can be used to drive the specializations of multiple `file'
+methods. See `resolve', `serialize', etc.
 
 The `name' slot can be used to refer to `file' objects in a human-readable fashion."))
 
@@ -121,7 +122,7 @@ not provided."))
   ()
   (:export-class-name-p t)
   (:documentation "If the resolved path has the GPG type (extension), the file is
-automatically crypted and decrypted using the specified recipient key.
+automatically encrypted and decrypted using the specified recipient key.
 
 See `nfiles/gpg:*gpg-default-recipient*'."))
 
@@ -129,7 +130,7 @@ See `nfiles/gpg:*gpg-default-recipient*'."))
   ()
   (:export-class-name-p t)
   (:documentation "If the resolved path has the GPG type (extension), the file is
-automatically crypted and decrypted using the specified recipient key.
+automatically encrypted and decrypted using the specified recipient key.
 
 The '.lisp' extension is automatically added if missing."))
 
@@ -145,10 +146,10 @@ Note that the file's `content' can still be modified in-memory."))
   (:documentation "File that's not read nor written to.  It's meant to handle data
 in-memory.
 
-Note that if multiple `virtual-file' expand to the same path, they share the
+Note that if multiple `virtual-file's expand to the same path, they share the
 same content.
 
-To disable content-sharing for specific `file', have their `resolve' method
+To disable content-sharing for a specific `file', their `resolve' method should
 return `uiop:*nil-pathname*'."))
 
 (defclass* remote-file (file)
@@ -183,7 +184,7 @@ If 0, disable automatic re-download.")
     ""
     :type string
     :documentation "If non-empty, the `check' method is called on download against the resulting data.
-If it does not matches the `checksum', raise an error.
+If it does not match the `checksum', raise an error.
 This probably only makes sense for immutable data, thus `update-interval' ought to be 0.")
    (on-invalid-checksum
     'ask
@@ -198,12 +199,12 @@ This probably only makes sense for immutable data, thus `update-interval' ought 
   (:accessor-name-transformer (class*:make-name-transformer name))
   (:documentation "File which can be found on a remote system or online.
 
-If the local find is not found, then an attempt is made at downloading the file
-using `fetcher'."))
+If the local file is not found, then an attempt is made at downloading the file
+using `fetch'."))
 
 (defvar *index* (tg:make-weak-hash-table :weakness :key :test 'equal)
-  "Set of all `file's objects.
-It's a weak hash table to that garbage-collected files are automatically
+  "Set of all `file' objects.
+It's a weak hash table so that garbage-collected files are automatically
 removed.")
 
 (export-always 'all-files)
