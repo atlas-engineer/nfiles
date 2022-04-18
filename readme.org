@@ -87,6 +87,30 @@ The =with-paths= helper allows for let-style bindings of the expanded paths:
       (list path1 path2)))
 #+end_src
 
+A =remote-file= works the same but needs some specialization:
+
+#+begin_src lisp
+  (defmethod nfiles:fetch ((profile nfiles:profile) (file remote-counter-file) &key)
+    (dex:get (nfiles:url file)))
+
+  ;; Optional:
+  (defmethod nfiles:check ((profile nfiles:profile) (file remote-counter-file) content &key)
+    (let ((path (nfiles:expand file)))
+      (ironclad:byte-array-to-hex-string
+       (ironclad:digest-file :sha3 path))))
+
+  (let ((file (make-instance 'nfiles:remote-file
+                             ;; The URL to download from if the file is not found on disk.
+                             :url (quri:uri "https://example.org")
+                             ;; Without base-path, the file won't be saved to disk.
+                             :base-path "/tmp/index.html"
+                             :checksum "794df316afac91572b899b52b54f53f04ef71f275a01c44b776013573445868c95317fc4a173a973e90addec7792ff8b637bdd80b1a6c60b03814a6544652a90")))
+    ;; On access, file is automatically downloaded if needed and the checksum is verified:
+    (nfiles:content file)
+    ;; ...
+    )
+#+end_src
+
 The tests contain more useful examples.
 
 ** Configuration
