@@ -130,7 +130,7 @@ Case is ignored."
                               uid
                               (iolib/syscalls:stat-gid (iolib/syscalls:lstat
                                                         native-path)))
-        (error "User ~a does not exist" new-group))))
+        (error "User ~a does not exist" new-user))))
 
 (export-always 'file-group)
 (defun file-group (path)
