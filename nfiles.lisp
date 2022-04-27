@@ -364,7 +364,7 @@ initialized, without looping indefinitely.")
 (defgeneric write-file (profile file &key destination &allow-other-keys)
   (:documentation "Persist FILE to disk.
 DESTINATION is set by default to a staged pathname (using
-`uiop:with-staging-pathname') which is renamed to the final name (the result
+`uiop:with-staging-pathname') which is renamed to the final name (the result of
 `expand' on FILE) if everything went well.
 This guarantees that on error the original file is left untouched.
 
@@ -531,7 +531,7 @@ If file is already on disk and younger than `update-interval', call next
                           (setf (slot-value file 'last-update) (get-universal-time))
                           (with-input-from-string (stream content)
                             (deserialize profile file stream)))))
-        (retry ()
+        (retry ()                       ; TODO: Test!
           (read-file profile file)))
 
       (call-next-method)))
