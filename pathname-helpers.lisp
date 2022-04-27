@@ -58,7 +58,8 @@ and check for existence."
       (apply #'join
              (let ((path1 (first paths))
                    (path2 (second paths)))
-               (if (pathname-directory path2)
+               (if (or (null (pathname-name path1))
+                       (pathname-directory path2))
                    (uiop:merge-pathnames* (uiop:relativize-pathname-directory (uiop:ensure-pathname path2))
                                           (uiop:ensure-pathname path1
                                                                 :ensure-directory t))

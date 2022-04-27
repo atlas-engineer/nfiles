@@ -55,6 +55,15 @@
   (is (nfiles:join #p"foo" "bar/baz")
       #p"foo/bar/baz"
       :test 'uiop:pathname-equal)
+  (is (nfiles:join #p"foo/bar" "baz")
+      #p"foo/barbaz"
+      :test 'uiop:pathname-equal)
+  (is (nfiles:join #p"foo/bar/" "baz")
+      #p"foo/bar/baz"
+      :test 'uiop:pathname-equal)
+  (is (nfiles:join #p"foo/" "bar/" "baz" "qux")
+      #p"foo/bar/bazqux"
+      :test 'uiop:pathname-equal)
   (is (nfiles:join #p"foo.txt" "bar/baz")
       #p"foo.txt/bar/baz"
       :test 'uiop:pathname-equal)
