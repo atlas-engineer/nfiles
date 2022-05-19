@@ -607,7 +607,8 @@ entry's `cached-value'. ")
                  (let ((value (read-file (profile (source-file entry)) (source-file entry)
                                          :force-update force-update
                                          :skip-update skip-update)))
-                   (when (typep (source-file entry) 'remote-file)
+                   (when (and (typep (source-file entry) 'remote-file)
+                              (not (uiop:file-exists-p (expand (source-file entry)))))
                      ;; If the file content is never set, then the `write-file'
                      ;; method is not called; however we want to persist the
                      ;; file for `remote-file' regardless, so we force a write

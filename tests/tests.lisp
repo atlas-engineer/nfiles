@@ -488,10 +488,12 @@
         test-content)
     (ok (uiop:file-exists-p (nfiles:expand file)))
     (is (download-count file) 1)
+    (is (write-count file) 1)
     (nfiles::clear-cache)
     (is (nfiles:content file)
         test-content)
-    (is (download-count file) 1)))
+    (is (download-count file) 1)
+    (is (write-count file) 1)))
 
 (nfile-test "Remote file in-memory"
   (let ((file (make-instance 'remote-counter-file
