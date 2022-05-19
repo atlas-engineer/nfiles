@@ -175,11 +175,6 @@ content.")
     :documentation "Re-download the file after this amount of seconds has
 elapsed since last update.
 If 0, disable automatic re-download.")
-   ;;    (checker nil ; TODO: implement?  Don't include it in the main package, only in the test package.
-   ;;             :type (or null  (function (string) boolean))
-   ;;             :documentation "Function to call against the `url-content'.
-   ;; This probably only makes sense for immutable data, thus `update-interval' ought to be 0.
-   ;; It is expected to return T if it matches `checksum', NIL otherwise.")
    (checksum
     ""
     :type string
