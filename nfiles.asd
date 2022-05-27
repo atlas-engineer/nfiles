@@ -27,4 +27,4 @@
 (defsystem "nfiles/tests"
   :depends-on (nfiles prove)
   :perform (test-op (op c)
-                    (symbol-call :prove :run "tests/")))
+                    (symbol-call :prove :run (system-relative-pathname c "tests/"))))
