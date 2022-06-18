@@ -1,7 +1,11 @@
 #+TITLE: NFiles
 
-NFiles is a Common Lisp library to help manage file persistence and loading, in
-particular user-centric files like configuration files.
+NFiles is a Common Lisp library that deals with customizable path resolution,
+file persistence and loading.
+
+Its main use case is help manage user-centric files like configuration files.
+
+In some aspects, it can be seen as "Common Lisp 'logical pathanes' over CLOS".
 
 ** Goals
 
@@ -57,7 +61,7 @@ on their machine instead of the expected
 A basic session:
 
 #+begin_src lisp
-(defvar *config-file* (make-instance 'nfiles:config-file :base-path "my-app/init.lisp"))
+(defvar *config-file* (make-instance 'nfiles:config-file :base-path #p"my-app/init.lisp"))
 
 (nfiles:expand *config-file*)
 ; => #P"/home/johndoe/.config/my-app/init.lisp"
@@ -81,7 +85,7 @@ The =with-paths= helper allows for let-style bindings of the expanded paths:
 
 #+begin_src lisp
   (let ((file1 (make-instance 'nfiles:file))
-        (file2 (make-instance 'nfiles:file :base-path "alt")))
+        (file2 (make-instance 'nfiles:file :base-path #p"alt")))
     (nfiles:with-paths ((path1 file1)
                         (path2 file2))
       (list path1 path2)))
@@ -103,7 +107,7 @@ A =remote-file= works the same but needs some specialization:
                              ;; The URL to download from if the file is not found on disk.
                              :url (quri:uri "https://example.org")
                              ;; Without base-path, the file won't be saved to disk.
-                             :base-path "/tmp/index.html"
+                             :base-path #p"/tmp/index.html"
                              :checksum "794df316afac91572b899b52b54f53f04ef71f275a01c44b776013573445868c95317fc4a173a973e90addec7792ff8b637bdd80b1a6c60b03814a6544652a90")))
     ;; On access, file is automatically downloaded if needed and the checksum is verified:
     (nfiles:content file)
@@ -134,7 +138,7 @@ The specialization methods are divided into the following:
 
 - =deserialize= and =serialize=: This is how the content is transformed
   to the file on disk.  These functions are meant to be called by the
-  =write-file= and =read-file= methods.
+  =read-file= and =write-file= methods.
 
 - =read-file= and =write-file=: This is how the file is read and written to
   disk.  These functions are responsible for calling the =deserialize= and
