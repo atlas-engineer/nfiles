@@ -4,7 +4,8 @@
 (in-package :cl-user)
 
 (uiop:define-package nfiles
-  (:use #:common-lisp)
+  (:use #:common-lisp #:nfiles/pathname)
+  (:reexport #:nfiles/pathname)
   (:import-from #:hu.dwim.defclass-star
                 #:defclass*)
   (:import-from #:serapeum
@@ -25,11 +26,6 @@ The content serialization and deserialization can be specialized via the
 The file reading and writing can be specialized via the `file-read' and
 `file-write' methods."))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (trivial-package-local-nicknames:add-package-local-nickname :alex :alexandria :nfiles)
-  (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum :nfiles)
-  (trivial-package-local-nicknames:add-package-local-nickname :class* :hu.dwim.defclass-star :nfiles))
-
 (uiop:define-package nfiles/gpg
   (:use #:common-lisp)
   (:import-from #:hu.dwim.defclass-star
@@ -42,6 +38,7 @@ The file reading and writing can be specialized via the `file-read' and
   (:documentation "A thin wrapper around the GPG command line tool."))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (trivial-package-local-nicknames:add-package-local-nickname :alex :alexandria :nfiles/gpg)
-  (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum :nfiles/gpg)
-  (trivial-package-local-nicknames:add-package-local-nickname :class* :hu.dwim.defclass-star :nfiles/gpg))
+  (dolist (package '(:nfiles/gpg :nfiles))
+    (trivial-package-local-nicknames:add-package-local-nickname :alex :alexandria package)
+    (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum package)
+    (trivial-package-local-nicknames:add-package-local-nickname :class* :hu.dwim.defclass-star package)))

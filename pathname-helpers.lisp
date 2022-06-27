@@ -1,7 +1,21 @@
 ;;;; SPDX-FileCopyrightText: Atlas Engineer LLC
 ;;;; SPDX-License-Identifier: BSD-3-Clause
 
-(in-package :nfiles)
+(uiop:define-package nfiles/pathname
+  (:use #:common-lisp)
+  (:import-from #:hu.dwim.defclass-star
+                #:defclass*)
+  (:import-from #:serapeum
+                #:export-always
+                #:->)
+  (:import-from #:trivial-types
+                #:pathname-designator)
+  (:documentation "Some `cl:pathname' helpers."))
+(in-package :nfiles/pathname)
+(serapeum:eval-always
+  (trivial-package-local-nicknames:add-package-local-nickname :alex :alexandria)
+  (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum)
+  (trivial-package-local-nicknames:add-package-local-nickname :class* :hu.dwim.defclass-star))
 
 ;; TODO: Make methods that take both pathnames and nfiles?
 ;; TODO: Define own `path-designator' type?

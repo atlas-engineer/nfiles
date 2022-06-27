@@ -18,9 +18,9 @@
                trivial-package-local-nicknames
                trivial-types)
   :components
-  ((:file "package")
+  ((:file "pathname-helpers")
+   (:file "package")
    (:file "conditions")
-   (:file "pathname-helpers")
    (:file "gpg")
    (:file "nfiles")))
 
