@@ -298,6 +298,8 @@ See `expand' for a convenience wrapper."))
     stream)
   (:documentation "Transform STREAM into a useful form
 ready to be manipulated on the Lisp side.
+The STREAM is provided by `read-file'.
+
 See `serialize' for the reverse action."))
 
 (defmethod deserialize :around ((profile profile) (file file) stream &key)
@@ -325,8 +327,8 @@ See `serialize' for the reverse action."))
 (defgeneric serialize (profile file stream &key &allow-other-keys)
   (:method ((profile profile) (file file) stream &key)
     (princ (content file) stream))
-  (:documentation "Transform `file' content meant to
-be persisted to a file.
+  (:documentation "Transform `file' content in a form meant to be persisted to a file.
+For the actual writing to disk, see `write-file'.
 
 See `deserialize' for the reverse action."))
 
