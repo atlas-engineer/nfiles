@@ -25,6 +25,9 @@
    (:file "nfiles")))
 
 (defsystem "nfiles/tests"
-  :depends-on (nfiles prove)
+  :depends-on (nfiles lisp-unit2)
+  :pathname "tests/"
+  :components ((:file "tests"))
   :perform (test-op (op c)
-                    (symbol-call :prove :run (system-relative-pathname c "tests/"))))
+                    (symbol-call :lisp-unit2 :run-tests :package :nfiles/tests
+                                 :run-contexts (find-symbol "WITH-SUMMARY-CONTEXT" :lisp-unit2))))
