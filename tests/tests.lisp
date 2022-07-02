@@ -442,8 +442,12 @@ to `with-nfiles-context'."
             permissions)
       (setf (appended-value file) 0)
       (sleep 1)
+      ;; Some implementation forward the conditions, others do not:
+      #+sbcl
       (assert-error 'error
                     (bt:join-thread (setf (nfiles:content file) new-content)))
+      #-sbcl
+      (bt:join-thread (setf (nfiles:content file) new-content))
       (assert-equal new-content (nfiles:content file))
       (assert-equal last-write-date (uiop:safe-file-write-date (nfiles:expand file)))
       (assert-equal permissions
