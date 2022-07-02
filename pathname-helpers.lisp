@@ -59,8 +59,19 @@ and check for existence."
 (defun basename (pathname)
   "Return the basename, that is:
 - if it's a directory, the name of the directory,
-- if it's a file, the name of the file including its type (extension)."
-  (first (last (pathname-directory (uiop:ensure-directory-pathname pathname)))))
+- if it's a file, the name of the file including its type (extension),
+- nil if it's a nil-pathname (#p\"\")."
+  (if (nil-pathname-p pathname)
+      nil                               ; TODO: Shouldn't we return #p"" instead?
+      (first (last (pathname-directory (uiop:ensure-pathname pathname
+                                                             :truenamize t
+                                                             :ensure-directory t))))))
+
+(defun special-pathname-namestring-p (pathname-namestring)
+  "Return non-nil if pathname is special like \".\" or \"..\".
+Note that this returns nil on #p\".\" and #p\"..\"."
+  (and (stringp pathname-namestring)
+       (member (namestring pathname-namestring) '("." "..") :test 'string=)))
 
 (export-always 'join)
 (-> join (&rest pathname-designator) (or pathname-designator null))
@@ -78,7 +89,9 @@ and check for existence."
                                           (uiop:ensure-pathname path1
                                                                 :ensure-directory t))
                    (let ((new-base (uiop:strcat (basename path1)
-                                                (basename path2))))
+                                                (if (special-pathname-namestring-p path2)
+                                                    path2
+                                                    (basename path2)))))
                      (make-pathname :defaults path1 :type (pathname-type new-base)
                                     :name (pathname-name new-base)))))
              (cddr paths))))
@@ -90,7 +103,7 @@ and check for existence."
 Case is ignored."
   (if (string-equal type (pathname-type path))
       path
-      (the (values pathname &optional) (join path "." type))))
+      (the (values pathname &optional) (join path (uiop:strcat "." type)))))
 
 (alex:define-constant +permissions+
     '((:user-read . 256) (:user-write . 128) (:user-exec . 64) (:group-read . 32)
