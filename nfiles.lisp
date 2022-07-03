@@ -365,6 +365,8 @@ DESTINATION is set by default to a staged pathname (using
 `expand' on FILE) if everything went well.
 This guarantees that on error the original file is left untouched.
 
+The specialized method is in charge for calling `serialize'.
+
 See `read-file' for the reverse action."))
 
 (defmethod write-file :around ((profile profile) (file file) &key destination)
@@ -469,6 +471,7 @@ This is meant to return a string which is then automatically compared to `checks
 (export-always 'read-file)
 (defgeneric read-file (profile file &key &allow-other-keys)
   (:documentation "Load FILE by calling `deserialize' on a stream opened on the file.
+The specialized method is in charge for calling `deserialize'.
 See `write-file' for the reverse action."))
 
 (defmethod read-file :around ((profile profile) (file file) &key)
@@ -753,6 +756,9 @@ Return the number of decrements, or NIL if there was none."
   "Set FILE content to VALUE and persist change to disk.
 While the content of the FILE object is updated instantly, the file is persisted
 in the background.
+
+This is a user-facing function, you should probably not try to call it from one
+of the specialized methods as this would set the logic upside down.
 
 Return a `bt:thread' object.  Call `bt:join-thread' on it to know when it's done
 writing the file."
