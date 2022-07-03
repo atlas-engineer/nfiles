@@ -179,7 +179,8 @@ to `with-nfiles-context'."
       :type unsigned-byte))
     (:accessor-name-transformer (class*:make-name-transformer name)))
 
-(defmethod nfiles:write-file ((profile nfiles:profile) (file counter-file) &key)
+(defmethod nfiles:write-file ((profile nfiles:profile) (file counter-file) &key destination)
+  (declare (ignore destination))
   (incf (write-count file))
   (call-next-method))
 
