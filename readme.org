@@ -115,7 +115,7 @@ A =remote-file= works the same but needs some specialization:
     )
 #+end_src
 
-The tests contain more useful examples.
+See the [[file:package.lisp][package]] documentation for a usage guide and more examples.
 
 ** Configuration
 
