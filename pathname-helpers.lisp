@@ -63,9 +63,11 @@ and check for existence."
 - nil if it's a nil-pathname (#p\"\")."
   (if (nil-pathname-p pathname)
       nil                               ; TODO: Shouldn't we return #p"" instead?
-      (first (last (pathname-directory (uiop:ensure-pathname pathname
-                                                             :truenamize t
-                                                             :ensure-directory t))))))
+      (first (last (pathname-directory
+                    ;; Ensure directory _after_ truenamizing, otherwise if
+                    ;; non-directory file exists it may not yield a directory.
+                    (uiop:ensure-directory-pathname
+                     (uiop:ensure-pathname pathname :truenamize t)))))))
 
 (defun special-pathname-namestring-p (pathname-namestring)
   "Return non-nil if pathname is special like \".\" or \"..\".
