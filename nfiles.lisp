@@ -770,7 +770,7 @@ writing the file."
 (export-always 'with-paths)
 (defmacro with-paths (bindings &body body)
   "Bind let-style BINDINGS to `file' path expansions, then run BODY if all these
-paths or non-nil after `nil-pathname-p'."
+paths are non-nil after `nil-pathname-p'."
   (alex:with-gensyms (path)
     `(sera:and-let* (,@(mapcar
                         (lambda (binding)
