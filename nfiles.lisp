@@ -462,10 +462,12 @@ This is meant to return a string which is then automatically compared to `checks
                                                        :wanted-checksum (checksum file)
                                                        :wrong-checksum checksum))))
           (ignore-checksum ()
+            :report "Proceed regardless of checksum."
             (warn "Bad checksum ~s, expected ~s"
                   wrong-checksum (checksum file))
             content)
           (discard ()
+            :report "Abort reading the file."
             (error 'read-error))))))
 
 (export-always 'read-file)
@@ -481,10 +483,12 @@ See `write-file' for the reverse action."))
       (restart-case (handler-bind ((error (auto-restarter (on-read-error file))))
                       (call-next-method))
         (backup ()
+          :report "Backup the file contents to a newly generated file."
           (backup path)
           ;; Return `nil' so that `content' also returns `nil' on error.
           nil)
         (delete ()
+          :report "Delete the file."
           (uiop:delete-file-if-exists path)
           nil)))))
 
@@ -532,6 +536,7 @@ If file is already on disk and younger than `update-interval', call next
                           (with-input-from-string (stream content)
                             (deserialize profile file stream)))))
         (retry ()                       ; TODO: Test!
+          :report "Try reading the file again."
           (read-file profile file)))
 
       (call-next-method)))
@@ -602,6 +607,7 @@ entry's `cached-value'. ")
                      (restart-case (handler-bind ((error ,handler))
                                      ,@body)
                        (forward-condition (&optional c)
+                         :report "Delegate handling this error to the code beyond NFiles."
                          c)))
                    :initial-bindings `((*default-pathname-defaults* . ,*default-pathname-defaults*))
                    :name ,name))
