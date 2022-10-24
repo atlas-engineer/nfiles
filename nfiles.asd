@@ -29,5 +29,12 @@
   :pathname "tests/"
   :components ((:file "tests"))
   :perform (test-op (op c)
-                    (symbol-call :lisp-unit2 :run-tests :package :nfiles/tests
-                                 :run-contexts (find-symbol "WITH-SUMMARY-CONTEXT" :lisp-unit2))))
+                    (let* ((*debugger-hook* nil)
+                           (test-results (symbol-call :lisp-unit2 :run-tests
+                                                      :package :nfiles/tests
+                                                      :run-contexts (find-symbol "WITH-SUMMARY-CONTEXT" :lisp-unit2))))
+                      (when (or
+                             (uiop:symbol-call :lisp-unit2 :failed test-results)
+                             (uiop:symbol-call :lisp-unit2 :errors test-results))
+                        ;; Arbitrary but hopefully recognizable exit code.
+                        (quit 18)))))
