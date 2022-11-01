@@ -114,3 +114,5 @@ Do not expect too much from it."))
     (trivial-package-local-nicknames:add-package-local-nickname :alex :alexandria package)
     (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum package)
     (trivial-package-local-nicknames:add-package-local-nickname :class* :hu.dwim.defclass-star package)))
+
+(push :nfiles *features*)
