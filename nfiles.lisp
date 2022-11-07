@@ -315,11 +315,13 @@ See `serialize' for the reverse action."))
   (declare (ignore stream))
   (read (call-next-method)))
 
-(defmethod deserialize ((profile profile) (file virtual-file) stream &key)
+(defmethod deserialize :around ((profile profile) (file virtual-file) stream &key)
+  ;; Must be an `:around' method to overrule other possible `:around' specialization.
   (declare (ignore stream))
   nil)
 
-(defmethod deserialize ((profile virtual-profile) (file file) stream &key)
+(defmethod deserialize :around ((profile virtual-profile) (file file) stream &key)
+  ;; Must be an `:around' method to overrule other possible `:around' specialization.
   (declare (ignore stream))
   nil)
 
