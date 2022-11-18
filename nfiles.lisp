@@ -268,6 +268,16 @@ See `expand' for a convenience wrapper."))
             (ensure-type (ensure-type (pathname-name path) "lisp") "gpg"))
         (call-next-method))))
 
+(defmethod resolve ((profile virtual-profile) (file file))
+  "Virtual files are in-memory only."
+  ;; Necessary so that virtual files don't use the cache.
+  #p"")
+
+(defmethod resolve ((profile profile) (file virtual-file))
+  "Virtual files are in-memory only."
+  ;; Necessary so that virtual files don't use the cache.
+  #p"")
+
 (defun maybe-xdg (xdg-fun path)
   (if (uiop:absolute-pathname-p path)
       path
