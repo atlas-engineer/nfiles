@@ -20,7 +20,7 @@ jobs:
         # TODO: Revert when Roswell is functional again.
         lisp: [sbcl-bin, ccl-bin/1.12.1, ecl/21.2.1]
         rosargs: [dynamic-space-size=3072]
-        os: [ubuntu-latest, macos-latest] # try windows-latest when we understand commands to install Roswell on it
+        os: [ubuntu-latest] # try windows-latest when we understand commands to install Roswell on it
 
     # run the job on every combination of "lisp" and "os" above
     runs-on: ${{ matrix.os }}
@@ -38,6 +38,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-dot-roswell-${{ matrix.lisp }}-
           ${{ runner.os }}-dot-roswell-
+
+    - name: Install dependencies
+      shell: bash
+      if: ${{ matrix.os != 'macos-latest' }}
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y libfixposix3 libfixposix-dev
 
     - name: Install Roswell
       shell: bash
