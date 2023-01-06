@@ -1,0 +1,168 @@
+[submodule "_build/serapeum"]
+	path = _build/serapeum
+	url = https://github.com/ruricolist/serapeum
+	shallow = true
+[submodule "_build/parse-number"]
+	path = _build/parse-number
+	url = https://github.com/sharplispers/parse-number/
+	shallow = true
+[submodule "_build/hu.dwim.defclass-star"]
+	path = _build/hu.dwim.defclass-star
+	url = https://github.com/hu-dwim/hu.dwim.defclass-star
+	shallow = true
+[submodule "_build/quri"]
+	path = _build/quri
+	url = https://github.com/fukamachi/quri
+	shallow = true
+[submodule "_build/trivial-package-local-nicknames"]
+	path = _build/trivial-package-local-nicknames
+	url = https://github.com/phoe/trivial-package-local-nicknames
+	shallow = true
+[submodule "_build/trivial-types"]
+	path = _build/trivial-types
+	url = https://github.com/m2ym/trivial-types
+	shallow = true
+[submodule "_build/split-sequence"]
+	path = _build/split-sequence
+	url = https://github.com/sharplispers/split-sequence
+	shallow = true
+[submodule "_build/string-case"]
+	path = _build/string-case
+	url = https://github.com/pkhuong/string-case
+	shallow = true
+[submodule "_build/trivial-garbage"]
+	path = _build/trivial-garbage
+	url = https://github.com/trivial-garbage/trivial-garbage
+	shallow = true
+[submodule "_build/bordeaux-threads"]
+	path = _build/bordeaux-threads
+	url = https://github.com/sionescu/bordeaux-threads
+	shallow = true
+[submodule "_build/parse-declarations.git"]
+	path = _build/parse-declarations.git
+	url = https://gitlab.common-lisp.net/parse-declarations/parse-declarations.git
+	shallow = true
+[submodule "_build/global-vars"]
+	path = _build/global-vars
+	url = https://github.com/lmj/global-vars
+	shallow = true
+[submodule "_build/trivial-file-size"]
+	path = _build/trivial-file-size
+	url = https://github.com/ruricolist/trivial-file-size
+	shallow = true
+[submodule "_build/trivial-macroexpand-all"]
+	path = _build/trivial-macroexpand-all
+	url = https://github.com/cbaggers/trivial-macroexpand-all
+	shallow = true
+[submodule "_build/cffi"]
+	path = _build/cffi
+	url = https://github.com/cffi/cffi
+	shallow = true
+[submodule "_build/cl-ppcre"]
+	path = _build/cl-ppcre
+	url = https://github.com/edicl/cl-ppcre
+	shallow = true
+[submodule "_build/fare-quasiquote.git"]
+	path = _build/fare-quasiquote.git
+	url = https://gitlab.common-lisp.net/frideau/fare-quasiquote.git
+	shallow = true
+[submodule "_build/fset"]
+	path = _build/fset
+	url = https://github.com/slburson/fset
+	shallow = true
+[submodule "_build/iterate.git"]
+	path = _build/iterate.git
+	url = https://gitlab.common-lisp.net/iterate/iterate.git
+	shallow = true
+[submodule "_build/type-i"]
+	path = _build/type-i
+	url = https://github.com/guicho271828/type-i
+	shallow = true
+[submodule "_build/babel"]
+	path = _build/babel
+	url = https://github.com/cl-babel/babel
+	shallow = true
+[submodule "_build/trivial-features"]
+	path = _build/trivial-features
+	url = https://github.com/trivial-features/trivial-features
+	shallow = true
+[submodule "_build/fare-utils.git"]
+	path = _build/fare-utils.git
+	url = https://gitlab.common-lisp.net/frideau/fare-utils.git
+	shallow = true
+[submodule "_build/optima"]
+	path = _build/optima
+	url = https://github.com/m2ym/optima
+	shallow = true
+[submodule "_build/devel.git"]
+	path = _build/devel.git
+	url = https://gitlab.common-lisp.net/misc-extensions/devel.git
+	shallow = true
+[submodule "_build/named-readtables"]
+	path = _build/named-readtables
+	url = https://github.com/melisgl/named-readtables
+	shallow = true
+[submodule "_build/introspect-environment"]
+	path = _build/introspect-environment
+	url = https://github.com/Bike/introspect-environment
+	shallow = true
+[submodule "_build/closer-mop"]
+	path = _build/closer-mop
+	url = https://github.com/pcostanza/closer-mop
+	shallow = true
+[submodule "_build/lisp-namespace"]
+	path = _build/lisp-namespace
+	url = https://github.com/guicho271828/lisp-namespace
+	shallow = true
+[submodule "_build/trivial-cltl2"]
+	path = _build/trivial-cltl2
+	url = https://github.com/Zulu-Inuoe/trivial-cltl2
+	shallow = true
+[submodule "_build/alexandria.git"]
+	path = _build/alexandria.git
+	url = https://gitlab.common-lisp.net/alexandria/alexandria.git
+	shallow = true
+[submodule "_build/hu.dwim.asdf"]
+	path = _build/hu.dwim.asdf
+	url = https://github.com/hu-dwim/hu.dwim.asdf
+	shallow = true
+[submodule "_build/trivia"]
+	path = _build/trivia
+	url = https://github.com/guicho271828/trivia
+	shallow = true
+[submodule "_build/cl-utilities"]
+	path = _build/cl-utilities
+	url = https://gitlab.common-lisp.net/cl-utilities/cl-utilities
+	shallow = true
+[submodule "_build/mt19937"]
+	path = _build/mt19937
+	url = https://gitlab.common-lisp.net/nyxt/mt19937
+	shallow = true
+[submodule "_build/idna"]
+	path = _build/idna
+	url = https://github.com/antifuchs/idna
+	shallow = true
+[submodule "_build/swap-bytes"]
+	path = _build/swap-bytes
+	url = https://github.com/sionescu/swap-bytes
+	shallow = true
+[submodule "_build/iolib"]
+	path = _build/iolib
+	url = https://github.com/sionescu/iolib
+	shallow = true
+[submodule "_build/cl-interpol"]
+	path = _build/cl-interpol
+	url = https://github.com/edicl/cl-interpol
+	shallow = true
+[submodule "_build/symbol-munger"]
+	path = _build/symbol-munger
+	url = https://github.com/AccelerationNet/symbol-munger
+	shallow = true
+[submodule "_build/cl-unicode"]
+	path = _build/cl-unicode
+	url = https://github.com/edicl/cl-unicode
+	shallow = true
+[submodule "_build/lisp-unit2"]
+	path = _build/lisp-unit2
+	url = https://github.com/AccelerationNet/lisp-unit2
+	shallow = true
