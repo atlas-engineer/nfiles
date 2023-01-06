@@ -7,7 +7,8 @@
   :author "Atlas Engineer LLC"
   :homepage "https://github.com/atlas-engineer/nfiles"
   :license "BSD 3-Clause"
-  :in-order-to ((test-op (test-op "nfiles/tests")))
+  :in-order-to ((test-op (test-op "nfiles/tests")
+                         (test-op "nfiles/tests/compilation")))
   :depends-on (alexandria
                hu.dwim.defclass-star
                #-sbcl
@@ -24,17 +25,19 @@
    (:file "gpg")
    (:file "nfiles")))
 
+(defsystem "nfiles/submodules"
+  :defsystem-depends-on ("nasdf")
+  :class :nasdf-submodule-system)
+
 (defsystem "nfiles/tests"
-  :depends-on (nfiles lisp-unit2)
-  :pathname "tests/"
-  :components ((:file "tests"))
-  :perform (test-op (op c)
-                    (let* ((*debugger-hook* nil)
-                           (test-results (symbol-call :lisp-unit2 :run-tests
-                                                      :package :nfiles/tests
-                                                      :run-contexts (find-symbol "WITH-SUMMARY-CONTEXT" :lisp-unit2))))
-                      (when (or
-                             (uiop:symbol-call :lisp-unit2 :failed test-results)
-                             (uiop:symbol-call :lisp-unit2 :errors test-results))
-                        ;; Arbitrary but hopefully recognizable exit code.
-                        (quit 18)))))
+  :defsystem-depends-on ("nasdf")
+  :class :nasdf-test-system
+  :depends-on (nfiles)
+  :targets (:package :nfiles/tests)
+  :components ((:file "tests/tests")))
+
+(defsystem "nfiles/tests/compilation"
+  :defsystem-depends-on ("nasdf")
+  :class :nasdf-compilation-test-system
+  :depends-on (nfiles)
+  :packages (:nfiles))
