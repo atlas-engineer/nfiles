@@ -123,7 +123,9 @@ to `with-nfiles-context'."
                   (nfiles:content file))))
 
 (define-test symlinks (:contexts '(with-nfiles-context))
-  (uiop:with-current-directory ((asdf:system-relative-pathname :nfiles "test-data"))
+  ;; WARNING: UIOP 3.3.1 (bundled with SBCL by default) requires a trailing / in
+  ;; `uiop:with-current-directory'.
+  (uiop:with-current-directory ((asdf:system-relative-pathname :nfiles "test-data/"))
 
     (let ((file (make-instance 'nfiles:file :base-path #p"link-to-dummy")))
       (assert-pathname-equal (uiop:ensure-pathname "dummy" :truenamize t)
