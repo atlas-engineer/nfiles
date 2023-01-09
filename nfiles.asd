@@ -10,7 +10,7 @@
   :in-order-to ((test-op (test-op "nfiles/tests")))
   :depends-on (alexandria
                hu.dwim.defclass-star
-               #-sbcl
+               #-(and sbcl (not android))
                iolib/os
                quri
                serapeum
