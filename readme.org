@@ -175,6 +175,8 @@ supported.
 Some notes:
 
 - All compilers but SBCL depend on [[https://github.com/sionescu/iolib][IOlib]] to preserve file attributes.
+- Android devices also depend on [[https://github.com/sionescu/iolib][IOlib]] to preserve file attributes,
+  regardless of the compiler.
 - File attributes might not be preserved on Windows.
 
 ** Roadmap
