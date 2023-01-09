@@ -116,43 +116,43 @@ Case is ignored."
 (export-always 'permissions)
 (defun permissions (path)
   "Return a list of permissions as per `+permissions+'."
-  #+sbcl
+  #+(and sbcl (not android))
   (let ((mode (sb-posix:stat-mode
                (sb-posix:lstat path))))
     (loop :for (name . value) :in +permissions+
           :when (plusp (logand mode value))
             :collect name))
-  #-sbcl
+  #-(and sbcl (not android))
   (iolib/os:file-permissions (uiop:native-namestring path)))
 
 (defun (setf permissions) (permissions path)
   "Set the PERMISSIONS or PATH as per `+permissions+'."
-  #+sbcl
+  #+(and sbcl (not android))
   (sb-posix:chmod path
                   (reduce (lambda (a b)
                             (logior a (rest (assoc b +permissions+))))
                           permissions :initial-value 0))
-  #-sbcl
+  #-(and sbcl (not android))
   (setf (iolib/os:file-permissions (uiop:native-namestring path)) permissions))
 
 (export-always 'file-user)
 (defun file-user (path)
   "Return PATH owner name."
   ;; `file-author' seems broken on many implementations.
-  #+(or ccl sbcl)
+  #+(or ccl (and sbcl (not android)))
   (file-author path)
-  #-(or  ccl sbcl)
+  #-(or ccl (and sbcl (not android)))
   (iolib/syscalls:getpwuid (iolib/syscalls:stat-uid
                             (iolib/syscalls:lstat
                              (uiop:native-namestring path)))))
 
 (defun (setf file-user) (new-user path)
   "Set PATH owner to NEW-USER (a string)."
-  #+sbcl
+  #+(and sbcl (not android))
   (sb-posix:chown path
                   (sb-posix:passwd-uid (sb-posix:getpwnam new-user))
                   (sb-posix:stat-gid (sb-posix:lstat path)))
-  #-sbcl
+  #-(and sbcl (not android))
   (let ((native-path (uiop:native-namestring path))
         (uid (nth-value 2 (iolib/syscalls:getpwnam new-user))))
     (if uid
@@ -165,22 +165,22 @@ Case is ignored."
 (export-always 'file-group)
 (defun file-group (path)
   "Return PATH group name."
-  #+sbcl
+  #+(and sbcl (not android))
   (sb-posix:group-name
    (sb-posix:getgrgid (sb-posix:stat-gid
                        (sb-posix:lstat path))))
-  #-sbcl
+  #-(and sbcl (not android))
   (iolib/syscalls:getgrgid (iolib/syscalls:stat-gid
                             (iolib/syscalls:lstat
                              (uiop:native-namestring path)))))
 
 (defun (setf file-group) (new-group path)
   "Set PATH group to NEW-GROUP (a string)."
-  #+sbcl
+  #+(and sbcl (not android))
   (sb-posix:chown path
                   (sb-posix:stat-uid (sb-posix:lstat path))
                   (sb-posix:group-gid (sb-posix:getgrnam new-group)))
-  #-sbcl
+  #-(and sbcl (not android))
   (let ((native-path (uiop:native-namestring path))
         (gid (nth-value 2 (iolib/syscalls:getgrnam new-group))))
     (if gid

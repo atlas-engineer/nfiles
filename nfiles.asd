@@ -11,7 +11,7 @@
                          (test-op "nfiles/tests/compilation")))
   :depends-on (alexandria
                hu.dwim.defclass-star
-               #-sbcl
+               #-(and sbcl (not android))
                iolib/os
                quri
                serapeum
