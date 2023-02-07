@@ -2,7 +2,7 @@
 ;;;; SPDX-License-Identifier: BSD-3-Clause
 
 (defsystem "nfiles"
-  :version "1.0.0"
+  :version "1.1.0"
   :description "Manage file persistence and loading."
   :author "Atlas Engineer LLC"
   :homepage "https://github.com/atlas-engineer/nfiles"
