@@ -585,3 +585,38 @@ to `with-nfiles-context'."
     (sleep 2)
     (assert-equal test-content3
                   (nfiles:content file))))
+
+(define-test virtual-files-and-profiles (:contexts '(with-nfiles-context))
+  (let* ((test-content "Test file.")
+         (file1 (make-instance 'nfiles:virtual-file
+                               :base-path #p"virtual-file"))
+         (file2 (make-instance 'nfiles:virtual-file
+                               :base-path #p"virtual-file"))
+         (file3 (make-instance 'nfiles:virtual-file
+                               :base-path #p"other-virtual")))
+    (setf (nfiles:content file1) test-content)
+    (assert-pathname-equal (uiop:merge-pathnames* "virtual-file" *test-dir*)
+                           (nfiles:expand file1))
+    (assert-pathname-equal (uiop:merge-pathnames* "virtual-file" *test-dir*)
+                           (nfiles:expand file2))
+    (assert-pathname-equal (uiop:merge-pathnames* "other-virtual" *test-dir*)
+                           (nfiles:expand file3))
+    (assert-false (uiop:file-exists-p (nfiles:expand file1)))
+    (assert-equal test-content
+                  (nfiles:content file1))
+    (assert-equal test-content
+                  (nfiles:content file2))
+    (assert-false (nfiles:content file3)))
+  (let* ((nfiles::*default-profile* (make-instance 'nfiles:virtual-profile))
+         (test-content "Test file.")
+         (file (make-instance 'nfiles:file
+                              :base-path #p"yet another file")))
+    (setf (nfiles:content file) test-content)
+    (assert-pathname-equal uiop:*nil-pathname*
+                           (nfiles:expand file))
+
+    (assert-pathname-equal (uiop:merge-pathnames* "yet another file" *test-dir*)
+                           (nfiles:resolve (make-instance 'nfiles:profile) file))
+    (assert-false (uiop:file-exists-p (nfiles:expand file)))
+    (assert-equal test-content
+                  (nfiles:content file))))
