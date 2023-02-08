@@ -24,7 +24,9 @@ Subclass this profile to make your own, possibly carrying more data.
 (defclass* virtual-profile (read-only-profile)
     ()
     (:export-class-name-p t)
-    (:documentation "In this profile, files are neither read nor written to by default."))
+    (:documentation "In this profile, files are neither read nor written to by default.
+Their path expands to #p\"\".
+If you want to know where a `file' would have expanded in another profile, use `resolve'."))
 
 (export-always '*default-profile*)
 (defvar *default-profile* (make-instance 'profile))
@@ -143,8 +145,12 @@ Note that the file's `content' can still be modified in-memory."))
 (defclass* virtual-file (read-only-file)
   ()
   (:export-class-name-p t)
-  (:documentation "File that's not read nor written to.  It's meant to handle data
-in-memory.
+  (:documentation "File that's not read nor written to.
+
+Virtual files are useful when you only need dynamic path expansion, while the
+read-and-write business is handled by a third party.
+
+You can nonetheless store data in-memory if needed.
 
 Note that if multiple `virtual-file's expand to the same path, they share the
 same content.
@@ -269,11 +275,6 @@ See `expand' for a convenience wrapper."))
         (call-next-method))))
 
 (defmethod resolve ((profile virtual-profile) (file file))
-  "Virtual files are in-memory only."
-  ;; Necessary so that virtual files don't use the cache.
-  #p"")
-
-(defmethod resolve ((profile profile) (file virtual-file))
   "Virtual files are in-memory only."
   ;; Necessary so that virtual files don't use the cache.
   #p"")
