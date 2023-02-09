@@ -189,6 +189,27 @@ Some notes:
   is it such a good idea?  Users should prefer compression at the level of the
   file system.
 
+** Change log
+
+*** 1.1.1
+
+- Allow path expansion for =virtual-file= (as in 1.0.0).
+
+  This restores the usefulness of virtual-files, namely to handle the
+  path-expansion business while deferring the read/write business to a
+  third-party.
+
+  =virtual-profile= still nullifies path expansions (as in 1.1.0).
+
+*** 1.1.0
+
+- Add support for Android.
+- Nullify path expansion for =virtual-file= and =virtual-profile=.
+- Ensure that the =deserialize= method of =virtual-file= and =virtual-profile=
+  return nil.
+- Fix =basename= corner case.
+- Add report messages to all restarts.
+
 ** History
 
 NFiles was originally developed for user file management in [[https://nyxt.atlas.engineer][Nyxt]], so the "N"
