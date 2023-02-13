@@ -3,8 +3,8 @@
 
 (uiop:define-package nfiles/tests
   (:use #:common-lisp #:lisp-unit2)
-  (:import-from #:hu.dwim.defclass-star
-                #:defclass*))
+  (:import-from #:nclasses
+                #:define-class))
 (in-package :nfiles/tests)
 
 (defvar *test-dir* (uiop:ensure-pathname
@@ -90,14 +90,14 @@ to `with-nfiles-context'."
     (uiop:with-current-directory ((uiop:temporary-directory))
       (assert-false (uiop:pathname-equal (nfiles:expand file) old-path)))))
 
-(defclass* myapp-file (nfiles:file)
+(define-class myapp-file (nfiles:file)
     ())
 
 (defmethod nfiles:resolve ((profile nfiles:profile) (file myapp-file))
   (let ((path (call-next-method)))
     (uiop:merge-pathnames* #p"myapp/" path)))
 
-(defclass* myapp-config-file (myapp-file nfiles:lisp-file nfiles:config-file)
+(define-class myapp-config-file (myapp-file nfiles:lisp-file nfiles:config-file)
     ())
 
 (define-test application-config-file (:contexts '(with-nfiles-context))
@@ -171,14 +171,13 @@ to `with-nfiles-context'."
   (let ((file (make-instance 'nfiles:file :base-path #p"bar")))
     (assert-false (nfiles:content file))))
 
-(defclass* counter-file (nfiles:file)
-    ((write-count
-      0
-      :type unsigned-byte)
-     (read-count
-      0
-      :type unsigned-byte))
-    (:accessor-name-transformer (class*:make-name-transformer name)))
+(define-class counter-file (nfiles:file)
+  ((write-count
+    0
+    :type unsigned-byte)
+   (read-count
+    0
+    :type unsigned-byte)))
 
 (defmethod nfiles:write-file ((profile nfiles:profile) (file counter-file) &key destination)
   (declare (ignore destination))
@@ -349,7 +348,7 @@ to `with-nfiles-context'."
       (assert-true (find-if (lambda (filename) (search "-backup" filename))
                             (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
-(defclass* nil-file (nfiles:virtual-file)
+(define-class nil-file (nfiles:virtual-file)
     ())
 (defmethod nfiles:resolve ((profile nfiles:profile) (file nil-file))
   #p"")
@@ -369,9 +368,8 @@ to `with-nfiles-context'."
                          (not-evaluated (make-instance 'nfiles:file :base-path (error "Should not reach here"))))
        not-evaluated))))
 
-(defclass* slow-file (nfiles:file)
-  ()
-  (:accessor-name-transformer (class*:make-name-transformer name)))
+(define-class slow-file (nfiles:file)
+  ())
 
 (defmethod nfiles:read-file ((profile nfiles:profile) (file slow-file) &key)
   (sleep 1)
@@ -419,9 +417,8 @@ to `with-nfiles-context'."
       (assert-true (find-if (lambda (filename) (search "-backup" filename))
                             (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
 
-(defclass* broken-write-file (nfiles:gpg-lisp-file)
-  ((appended-value 1))
-  (:accessor-name-transformer (class*:make-name-transformer name)))
+(define-class broken-write-file (nfiles:gpg-lisp-file)
+  ((appended-value 1)))
 
 (defmethod nfiles:write-file ((profile nfiles:profile) (file broken-write-file) &key destination)
   (nfiles/gpg:with-gpg-file (stream destination :direction :output)
@@ -459,11 +456,10 @@ to `with-nfiles-context'."
   (serapeum:trim-whitespace
    (alexandria:read-file-into-string (quri:uri-file-pathname uri))))
 
-(defclass* remote-counter-file (counter-file nfiles:remote-file)
+(define-class remote-counter-file (counter-file nfiles:remote-file)
   ((download-count
     0
-    :type unsigned-byte))
-  (:accessor-name-transformer (class*:make-name-transformer name)))
+    :type unsigned-byte)))
 
 (defmethod nfiles:fetch ((profile nfiles:profile) (file remote-counter-file) &key)
   (incf (download-count file))

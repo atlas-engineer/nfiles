@@ -3,25 +3,24 @@
 
 (in-package :nfiles)
 
-(defclass* profile ()
+(define-class profile ()
   ((name "default"
          :type string
          :documentation "The name of the profile to refer it with."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
-  (:accessor-name-transformer (class*:make-name-transformer name))
   (:documentation "This is the default profile.
 Subclass this profile to make your own, possibly carrying more data.
 
 `file' path expansion is specialized against its `profile' slot through the
 `resolve' method."))
 
-(defclass* read-only-profile (profile)
+(define-class read-only-profile (profile)
   ()
   (:export-class-name-p t)
   (:documentation "In this profile, files by default don't get written to."))
 
-(defclass* virtual-profile (read-only-profile)
+(define-class virtual-profile (read-only-profile)
     ()
     (:export-class-name-p t)
     (:documentation "In this profile, files are neither read nor written to by default.
@@ -31,7 +30,7 @@ If you want to know where a `file' would have expanded in another profile, use `
 (export-always '*default-profile*)
 (defvar *default-profile* (make-instance 'profile))
 
-(defclass* file ()
+(define-class file ()
   ((base-path
     #p"." ; Current directory by default, so that path merging does the right thing.
     :type pathname
@@ -83,7 +82,6 @@ the debugger with the other options.")
 See `on-deserialization-error' for the meaning of the different actions."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
-  (:accessor-name-transformer (class*:make-name-transformer name))
   (:documentation "The main object to manipulate and subclass.
 The `profile' slot can be used to drive the specializations of multiple `file'
 methods. See `resolve', `serialize', etc.
@@ -94,33 +92,33 @@ The `name' slot can be used to refer to `file' objects in a human-readable fashi
 (export-always '(ask backup delete))
 (export-always '(ask ignore-checksum discard))
 
-(defclass* lisp-file (file)
+(define-class lisp-file (file)
   ()
   (:export-class-name-p t)
   (:documentation "Like regular `file' but assume a `.lisp' extension, even if
 not provided."))
 
-(defclass* config-file (file)
+(define-class config-file (file)
   ()
   (:export-class-name-p t)
   (:documentation "Like regular `file' but set directory to `uiop:xdg-config-home'."))
 
-(defclass* cache-file (file)
+(define-class cache-file (file)
   ()
   (:export-class-name-p t)
   (:documentation "Like regular `file' but set directory to `uiop:xdg-cache-home'"))
 
-(defclass* data-file (file)
+(define-class data-file (file)
   ()
   (:export-class-name-p t)
   (:documentation "Like regular `file' but set directory to `uiop:xdg-data-home'"))
 
-(defclass* runtime-file (file)
+(define-class runtime-file (file)
   ()
   (:export-class-name-p t)
   (:documentation "Like regular `file' but set directory to `uiop:xdg-runtime-dir'"))
 
-(defclass* gpg-file (file)
+(define-class gpg-file (file)
   ()
   (:export-class-name-p t)
   (:documentation "If the resolved path has the GPG type (extension), the file is
@@ -128,7 +126,7 @@ automatically encrypted and decrypted using the specified recipient key.
 
 See `nfiles/gpg:*gpg-default-recipient*'."))
 
-(defclass* gpg-lisp-file (gpg-file lisp-file)
+(define-class gpg-lisp-file (gpg-file lisp-file)
   ()
   (:export-class-name-p t)
   (:documentation "If the resolved path has the GPG type (extension), the file is
@@ -136,13 +134,13 @@ automatically encrypted and decrypted using the specified recipient key.
 
 The '.lisp' extension is automatically added if missing."))
 
-(defclass* read-only-file (file)
+(define-class read-only-file (file)
   ()
   (:export-class-name-p t)
   (:documentation "File that's not written to on change.
 Note that the file's `content' can still be modified in-memory."))
 
-(defclass* virtual-file (read-only-file)
+(define-class virtual-file (read-only-file)
   ()
   (:export-class-name-p t)
   (:documentation "File that's not read nor written to.
@@ -158,7 +156,7 @@ same content.
 To disable content-sharing for a specific `file', their `resolve' method should
 return `uiop:*nil-pathname*'."))
 
-(defclass* remote-file (file)
+(define-class remote-file (file)
   ((url
     (quri:uri "")
     :type quri:uri
@@ -197,7 +195,6 @@ This probably only makes sense for immutable data, thus `update-interval' ought 
     :documentation "What to do when the file download failed."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
-  (:accessor-name-transformer (class*:make-name-transformer name))
   (:documentation "File which can be found on a remote system or online.
 
 If the local file is not found, then an attempt is made at downloading the file
@@ -594,7 +591,7 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
 ;; We also don't want to needlessly duplicate the content in memory.
 ;; TODO: How do we garbage collect cache entries?  We can call `clear-cache'.
 
-(defclass* cache-entry ()                ; TODO: Rename?
+(define-class cache-entry ()                ; TODO: Rename?
   ((source-file
     (error "Source file must be given.")
     :type file
@@ -612,8 +609,7 @@ entry's `cached-value'. ")
     :type (or null bt:thread))
    (worker-notifier
     nil
-    :type (or null bt:semaphore)))
-  (:accessor-name-transformer (class*:make-name-transformer name)))
+    :type (or null bt:semaphore))))
 
 (defmacro run-thread (name handler &body body)
   `(bt:make-thread (lambda ()

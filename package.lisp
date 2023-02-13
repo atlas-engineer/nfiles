@@ -6,8 +6,8 @@
 (uiop:define-package nfiles
   (:use #:common-lisp #:nfiles/pathname)
   (:reexport #:nfiles/pathname)
-  (:import-from #:hu.dwim.defclass-star
-                #:defclass*)
+  (:import-from #:nclasses
+                #:define-class)
   (:import-from #:serapeum
                 #:export-always
                 #:->)
@@ -99,8 +99,8 @@ user (and probably break the logic)."))
 
 (uiop:define-package nfiles/gpg
   (:use #:common-lisp)
-  (:import-from #:hu.dwim.defclass-star
-                #:defclass*)
+  (:import-from #:nclasses
+                #:define-class)
   (:import-from #:serapeum
                 #:export-always
                 #:->)
@@ -112,5 +112,4 @@ Do not expect too much from it."))
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (dolist (package '(:nfiles/gpg :nfiles))
     (trivial-package-local-nicknames:add-package-local-nickname :alex :alexandria package)
-    (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum package)
-    (trivial-package-local-nicknames:add-package-local-nickname :class* :hu.dwim.defclass-star package)))
+    (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum package)))

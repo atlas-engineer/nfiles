@@ -9,14 +9,13 @@
 (export-always '*gpg-default-recipient*)
 (defvar *gpg-default-recipient* nil)
 
-(defclass* gpg-uid ()
+(define-class gpg-uid ()
   ((validity)
    (user-id))
   (:export-class-name-p t)
-  (:export-accessor-names-p t)
-  (:accessor-name-transformer (class*:make-name-transformer name)))
+  (:export-accessor-names-p t))
 
-(defclass* gpg-key ()
+(define-class gpg-key ()
   ((key-length)
    ;; See https://tools.ietf.org/html/rfc4880#page-62 for the meaning of the algorithm ID.
    (algorithm)
@@ -29,8 +28,7 @@
    (fingerprint)
    (keygrip))
   (:export-class-name-p t)
-  (:export-accessor-names-p t)
-  (:accessor-name-transformer (class*:make-name-transformer name)))
+  (:export-accessor-names-p t))
 
 (defun parse-gpg-secret-keys-output (output-string)
   "Return the list of sections as a list of strings."

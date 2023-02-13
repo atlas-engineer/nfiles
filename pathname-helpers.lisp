@@ -3,8 +3,8 @@
 
 (uiop:define-package nfiles/pathname
   (:use #:common-lisp)
-  (:import-from #:hu.dwim.defclass-star
-                #:defclass*)
+  (:import-from #:nclasses
+                #:define-class)
   (:import-from #:serapeum
                 #:export-always
                 #:->)
@@ -14,8 +14,7 @@
 (in-package :nfiles/pathname)
 (serapeum:eval-always
   (trivial-package-local-nicknames:add-package-local-nickname :alex :alexandria)
-  (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum)
-  (trivial-package-local-nicknames:add-package-local-nickname :class* :hu.dwim.defclass-star))
+  (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum))
 
 ;; TODO: Make methods that take both pathnames and nfiles?
 ;; TODO: Define own `path-designator' type?

@@ -6,10 +6,6 @@
 	path = _build/parse-number
 	url = https://github.com/sharplispers/parse-number/
 	shallow = true
-[submodule "_build/hu.dwim.defclass-star"]
-	path = _build/hu.dwim.defclass-star
-	url = https://github.com/hu-dwim/hu.dwim.defclass-star
-	shallow = true
 [submodule "_build/quri"]
 	path = _build/quri
 	url = https://github.com/fukamachi/quri
@@ -122,10 +118,6 @@
 	path = _build/alexandria.git
 	url = https://gitlab.common-lisp.net/alexandria/alexandria.git
 	shallow = true
-[submodule "_build/hu.dwim.asdf"]
-	path = _build/hu.dwim.asdf
-	url = https://github.com/hu-dwim/hu.dwim.asdf
-	shallow = true
 [submodule "_build/trivia"]
 	path = _build/trivia
 	url = https://github.com/guicho271828/trivia
@@ -166,3 +158,9 @@
 	path = _build/lisp-unit2
 	url = https://github.com/AccelerationNet/lisp-unit2
 	shallow = true
+[submodule "_build/nclasses"]
+	path = _build/nclasses
+	url = https://github.com/atlas-engineer/nclasses/
+[submodule "_build/moptilities"]
+	path = _build/moptilities
+	url = https://github.com/gwkkwg/moptilities/
