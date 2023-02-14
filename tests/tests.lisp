@@ -232,8 +232,8 @@ to `with-nfiles-context'."
     (assert-error 'nfiles:external-modification
                   (nfiles:content file1))
 
-    (setf (nfiles:on-external-modification file1) 'nfiles:reload)
-    (setf (nfiles:on-external-modification file2) 'nfiles:reload)
+    (setf (nfiles:on-external-modification file1) :reload)
+    (setf (nfiles:on-external-modification file2) :reload)
     (assert-equal test-content2
                   (nfiles:content file1))
     (assert-equal test-content2
@@ -243,8 +243,8 @@ to `with-nfiles-context'."
     (sleep 1)       ; Need to sleep 1s because time resolution is to the second.
     (alexandria:write-string-into-file test-content2 (nfiles:expand file1)
                                        :if-exists :supersede)
-    (setf (nfiles:on-external-modification file1) 'nfiles:overwrite)
-    (setf (nfiles:on-external-modification file2) 'nfiles:overwrite)
+    (setf (nfiles:on-external-modification file1) :overwrite)
+    (setf (nfiles:on-external-modification file2) :overwrite)
 
     (assert-equal test-content3
                   (nfiles:content file1))
@@ -313,7 +313,7 @@ to `with-nfiles-context'."
         (assert-typep 'end-of-file error))
       (assert-eql errors 2)
       (assert-true (uiop:file-exists-p (nfiles:expand corrupted-file)))
-      (setf (nfiles:on-deserialization-error corrupted-file) 'nfiles:delete)
+      (setf (nfiles:on-deserialization-error corrupted-file) :delete)
       (nfiles:content corrupted-file)
       (assert-false (uiop:file-exists-p (nfiles:expand corrupted-file))))))
 
@@ -335,7 +335,7 @@ to `with-nfiles-context'."
       (assert-false (nfiles:content corrupted-file) nil)
       (assert-eql 2 errors)
       (assert-true (uiop:file-exists-p (nfiles:expand corrupted-file)))
-      (setf (nfiles:on-deserialization-error corrupted-file) 'nfiles:delete)
+      (setf (nfiles:on-deserialization-error corrupted-file) :delete)
       (nfiles:content corrupted-file)
       (assert-false (uiop:file-exists-p (nfiles:expand corrupted-file))))))
 
@@ -343,7 +343,7 @@ to `with-nfiles-context'."
   (let ((corrupted-path "corrupt.lisp"))
     (alexandria:write-string-into-file "(" corrupted-path)
     (let ((corrupted-file (make-instance 'nfiles:lisp-file :base-path #p"corrupt"
-                                         :on-deserialization-error 'nfiles:backup)))
+                                         :on-deserialization-error :backup)))
       (assert-false (nfiles:content corrupted-file) nil)
       (assert-true (find-if (lambda (filename) (search "-backup" filename))
                             (mapcar #'pathname-name (uiop:directory-files *test-dir*)))))))
@@ -410,7 +410,7 @@ to `with-nfiles-context'."
     ;; Clear the cache so that next file tries reading the corrupted file.
     (nfiles::clear-cache)
     (let ((corrupted-lisp-file (make-instance 'nfiles:gpg-lisp-file :base-path #p"corrupt.gpg"
-                                              :on-read-error 'nfiles:backup)))
+                                              :on-read-error :backup)))
       (assert-equal (uiop:ensure-pathname "corrupt.lisp.gpg" :truenamize t)
                     (nfiles:expand corrupted-lisp-file))
       (assert-false (nfiles:content corrupted-lisp-file))
@@ -545,7 +545,7 @@ to `with-nfiles-context'."
          (file (make-instance 'remote-counter-file
                               :read-handler (lambda (c)
                                               (invoke-restart 'nfiles::forward-condition c))
-                              :on-invalid-checksum 'nfiles:discard
+                              :on-invalid-checksum :discard
                               :base-path #p"local-dummy3"
                               :url *remote-file-url*
                               :checksum (write-to-string (1+ (length test-content))))))

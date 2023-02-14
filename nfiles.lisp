@@ -63,21 +63,21 @@ in the reader thread.")
     :documentation "Function of one argument, the condition that may be raised
 in the writer thread.")
    (on-external-modification
-    'ask
-    :type (member ask reload overwrite)
+    :ask
+    :type (member :ask :reload :overwrite)
     :documentation "Whether to reload or overwrite the file if it was modified
 since it was last loaded.")
    (on-deserialization-error
-    'ask
-    :type (member ask backup delete)
+    :ask
+    :type (member :ask :backup :delete)
     :documentation "What to do on deserialization error.
 The offending file may be backed up with the `backup' function.
 Or it may simply be `delete'd.
-`ask' leaves the condition unhandled, so unless you handle it, it will prompt
+`:ask' leaves the condition unhandled, so unless you handle it, it will prompt
 the debugger with the other options.")
    (on-read-error
-    'ask
-    :type (member ask backup delete)
+    :ask
+    :type (member :ask :backup :delete)
     :documentation "What to do on file read error.
 See `on-deserialization-error' for the meaning of the different actions."))
   (:export-class-name-p t)
@@ -87,10 +87,6 @@ The `profile' slot can be used to drive the specializations of multiple `file'
 methods. See `resolve', `serialize', etc.
 
 The `name' slot can be used to refer to `file' objects in a human-readable fashion."))
-
-(export-always '(ask reload overwrite))
-(export-always '(ask backup delete))
-(export-always '(ask ignore-checksum discard))
 
 (define-class lisp-file (file)
   ()
@@ -186,12 +182,12 @@ If 0, disable automatic re-download.")
 If it does not match the `checksum', raise an error.
 This probably only makes sense for immutable data, thus `update-interval' ought to be 0.")
    (on-invalid-checksum
-    'ask
-    :type (member ask ignore-checksum discard)
+    :ask
+    :type (member :ask :ignore-checksum :discard)
     :documentation "What to do when the downloaded content does not match `checksum'.")
    (on-fetch-error
-    'ask
-    :type (member ask)                  ; TODO: Can't put `retry' here, lest it would loop.  What else?
+    :ask
+    :type (member :ask)                  ; TODO: Can't put `retry' here, lest it would loop.  What else?
     :documentation "What to do when the file download failed."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
@@ -471,12 +467,12 @@ This is meant to return a string which is then automatically compared to `checks
                               (error 'invalid-checksum :path (expand file)
                                                        :wanted-checksum (checksum file)
                                                        :wrong-checksum checksum))))
-          (ignore-checksum ()
+          (:ignore-checksum ()
             :report "Proceed regardless of checksum."
             (warn "Bad checksum ~s, expected ~s"
                   wrong-checksum (checksum file))
             content)
-          (discard ()
+          (:discard ()
             :report "Abort reading the file."
             (error 'read-error))))))
 
@@ -492,12 +488,12 @@ See `write-file' for the reverse action."))
     (when (uiop:file-exists-p path)
       (restart-case (handler-bind ((error (auto-restarter (on-read-error file))))
                       (call-next-method))
-        (backup ()
+        (:backup ()
           :report "Backup the file contents to a newly generated file."
           (backup path)
           ;; Return `nil' so that `content' also returns `nil' on error.
           nil)
-        (delete ()
+        (:delete ()
           :report "Delete the file."
           (uiop:delete-file-if-exists path)
           nil)))))
@@ -545,7 +541,7 @@ If file is already on disk and younger than `update-interval', call next
                           (setf (slot-value file 'last-update) (get-universal-time))
                           (with-input-from-string (stream content)
                             (deserialize profile file stream)))))
-        (retry ()                       ; TODO: Test!
+        (:retry ()                       ; TODO: Test!
           :report "Try reading the file again."
           (read-file profile file)))
 
@@ -669,9 +665,9 @@ entry's `cached-value'. ")
                                                                         0))
                                          (error 'external-modification
                                                 :path path))))
-                       (reload ()
+                       (:reload ()
                          t)
-                       (overwrite ()
+                       (:overwrite ()
                          (sera:synchronized (entry)
                            (write-cache-entry file entry))
                          nil)))))
