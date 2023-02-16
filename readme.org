@@ -196,6 +196,15 @@ Some notes:
 
 ** Change log
 
+*** 1.1.2
+
+- Add restarter functions for =ask=, =reload=, etc.
+  Mind that =cl:delete= is now shadowed (this was necessary to preserve backward
+  compatibility).
+  Do not =:use= the package!
+
+- Switch from =hu.dwim.defclass-star= to [[https://github.com/atlas-engineer/nclasses/][nclasses]].
+
 *** 1.1.1
 
 - Allow path expansion for =virtual-file= (as in 1.0.0).
