@@ -8,10 +8,7 @@
   :homepage "https://github.com/atlas-engineer/nfiles"
   :license "BSD 3-Clause"
   :in-order-to ((test-op (test-op "nfiles/tests")
-                         ;; Temporarily disabled until PR is merged
-                         ;; https://github.com/atlas-engineer/nfiles/issues/14
-                         ;; (test-op "nfiles/tests/compilation")
-                         ))
+                         (test-op "nfiles/tests/compilation")))
   :depends-on (alexandria
                #-(and sbcl (not android))
                iolib/os

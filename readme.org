@@ -167,6 +167,11 @@ provide for interactive and customizable behaviour:
 - =process-error=: This may be raised for instance when =gpg= fails to encrypt.
   The =use-recipient= restart is provided to retry with the given recipient.
 
+** Shadowing
+
+NFiles 1 shadows =cl:delete=, thus you should not =:use= the package (as with
+any other library anyways).
+
 ** Platform support
 
 It's pure Common Lisp and all compilers plus all operating systems should be

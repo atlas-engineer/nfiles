@@ -6,6 +6,7 @@
 (uiop:define-package nfiles
   (:use #:common-lisp #:nfiles/pathname)
   (:reexport #:nfiles/pathname)
+  (:shadow #:delete)                    ; TODO: Rename (and unshadow) with 2.0.0.
   (:import-from #:nclasses
                 #:define-class)
   (:import-from #:serapeum

@@ -64,12 +64,12 @@ in the reader thread.")
 in the writer thread.")
    (on-external-modification
     'ask
-    :type (member ask reload overwrite)
+    :type symbol
     :documentation "Whether to reload or overwrite the file if it was modified
 since it was last loaded.")
    (on-deserialization-error
     'ask
-    :type (member ask backup delete)
+    :type symbol
     :documentation "What to do on deserialization error.
 The offending file may be backed up with the `backup' function.
 Or it may simply be `delete'd.
@@ -77,7 +77,7 @@ Or it may simply be `delete'd.
 the debugger with the other options.")
    (on-read-error
     'ask
-    :type (member ask backup delete)
+    :type symbol
     :documentation "What to do on file read error.
 See `on-deserialization-error' for the meaning of the different actions."))
   (:export-class-name-p t)
@@ -88,9 +88,27 @@ methods. See `resolve', `serialize', etc.
 
 The `name' slot can be used to refer to `file' objects in a human-readable fashion."))
 
-(export-always '(ask reload overwrite))
-(export-always '(ask backup delete))
-(export-always '(ask ignore-checksum discard))
+(defun try-restart (name &rest arguments)
+  (alex:when-let ((restart (find-restart name)))
+    (apply #'invoke-restart restart arguments)))
+
+(macrolet ((define-restarter (name args)
+             `(progn
+                (export-always ',name)
+                (defun ,name (,@args &optional condition)
+                  (declare (ignore condition))
+                  ,(format
+                    nil
+                    "Transfer control to a restart named ~a, or return NIL if none exists."
+                    name)
+                  (try-restart ',name ,@args)))))
+  (define-restarter ask ())
+  (define-restarter reload ())
+  (define-restarter overwrite ())
+  (define-restarter backup ())
+  (define-restarter delete ())
+  (define-restarter ignore-checksum ())
+  (define-restarter discard ()))
 
 (define-class lisp-file (file)
   ()
@@ -187,11 +205,11 @@ If it does not match the `checksum', raise an error.
 This probably only makes sense for immutable data, thus `update-interval' ought to be 0.")
    (on-invalid-checksum
     'ask
-    :type (member ask ignore-checksum discard)
+    :type symbol
     :documentation "What to do when the downloaded content does not match `checksum'.")
    (on-fetch-error
-    'ask
-    :type (member ask)                  ; TODO: Can't put `retry' here, lest it would loop.  What else?
+    'ask ; TODO: Can't put `retry' here, lest it would loop.  What else?
+    :type symbol
     :documentation "What to do when the file download failed."))
   (:export-class-name-p t)
   (:export-accessor-names-p t)
@@ -293,12 +311,13 @@ See `expand' for a convenience wrapper."))
 (defmethod resolve ((profile profile) (file runtime-file))
   (maybe-xdg #'uiop:xdg-runtime-dir (call-next-method)))
 
-(defun auto-restarter (restart)
-  "Call RESTART if valid."
+(defun auto-restarter (restarter)
+  "Return a function that calls RESTARTER.
+RESTARTER is a function that invokes a given restart if valid.
+See `ask' for instance."
   (lambda (c)
     (declare (ignore c))
-    (alex:when-let ((restart (find-restart restart)))
-      (invoke-restart restart))))
+    (funcall restarter)))
 
 (export-always 'deserialize)
 (defgeneric deserialize (profile file stream &key &allow-other-keys)
@@ -435,7 +454,7 @@ See `*gpg-default-recipient*'."
   (declare (ignore destination))
   nil)
 
-(defun backup (path)
+(defun back-up (path)
   "Rename PATH to a file of the same name with a unique suffix appended.
 The file is guaranteed to not conflict with any existing file."
   (let* ((path (uiop:ensure-pathname path :truename t))
@@ -494,7 +513,7 @@ See `write-file' for the reverse action."))
                       (call-next-method))
         (backup ()
           :report "Backup the file contents to a newly generated file."
-          (backup path)
+          (back-up path)
           ;; Return `nil' so that `content' also returns `nil' on error.
           nil)
         (delete ()
