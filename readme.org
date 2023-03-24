@@ -5,22 +5,21 @@ file persistence and loading.
 
 Its main use case is help manage user-centric files like configuration files.
 
-In some aspects, it can be seen as "Common Lisp 'logical pathanes' over CLOS".
+In some aspects, it can be seen as "Common Lisp 'logical pathnames' over CLOS".
 
 ** Goals
 
-- Performance:
+- Performance ::
   - Data is not persisted to disk if it does not need to.
   - Files are read only once (unless modified externally).
-- Extensibility:
-  Persist any data structure the way you want it.
-- Reliability: no corruption and no data loss should occur.
+- Extensibility :: Persist any data structure the way you want it.
+- Reliability :: no corruption and no data loss should occur.
 
 ** Features
 
 - Dynamic and customizable path expansion.
 - Extensible serialization and deserialization.
-- Cached reads and writes.
+- Cached reads and writes ::
   When a =file= object expands to the same path as another one, a =read= or
   =write= on it won't do anything in case there was no change since last write.
 - (*Experimental!*) On-the-fly PGP encryption.
@@ -133,22 +132,22 @@ Of course you can specialize against both!
 
 The specialization methods are divided into the following:
 
-- =resolve=: This is where path resolution is done.  On call site, prefer the
+- =resolve= :: This is where path resolution is done.  On call site, prefer the
   =expand= convenience wrapper.
 
-- =deserialize= and =serialize=: This is how the content is transformed
+- =deserialize= and =serialize= :: This is how the content is transformed
   to the file on disk.  These functions are meant to be called by the
   =read-file= and =write-file= methods.
 
-- =read-file= and =write-file=: This is how the file is read and written to
+- =read-file= and =write-file= :: This is how the file is read and written to
   disk.  These functions are responsible for calling the =deserialize= and
   =serialize= methods.
 
-- =fetch=: This generic function is only called for =remote-file= objects.  You
+- =fetch= :: This generic function is only called for =remote-file= objects.  You
   _must_ define its methods.  It does not have any method by default so as to
   not burden NFiles with undesirable dependencies.
 
-- =check=: Like =fetch=, this generic function is only called for =remote-file=
+- =check :=: Like =fetch=, this generic function is only called for =remote-file=
   objects to test the integrity of the downloaded file.  You _must_ define its
   methods.  It does not have any method by default so as to not burden NFiles
   with undesirable dependencies.
@@ -158,13 +157,13 @@ The specialization methods are divided into the following:
 Some NFiles-specific conditions are raised in case of exceptional situations to
 provide for interactive and customizable behaviour:
 
-- =external-modification=: The file was modified externally.  See the
+- =external-modification= :: The file was modified externally.  See the
   =on-external-modification= slot to automate what to do in this case.
 
 - Read error restarts can also customized, see the =on-read-error= slot to
   automate what to do in this case.
 
-- =process-error=: This may be raised for instance when =gpg= fails to encrypt.
+- =process-error= :: This may be raised for instance when =gpg= fails to encrypt.
   The =use-recipient= restart is provided to retry with the given recipient.
 
 ** Shadowing
@@ -188,11 +187,12 @@ Some notes:
 
 - Improve PGP support.
 - Support OS-level locks (à-la Emacs / LibreOffice).
-- Improve portability, in particular preservation of file attributes may not
-  work on Windows.
-- Compressing =write-file= and =read-file= (for instance with zstd / lz).  But
-  is it such a good idea?  Users should prefer compression at the level of the
-  file system.
+- Improve portability.
+  - In particular, preservation of file attributes may not work on
+    Windows.
+- Compressing =write-file= and =read-file= (for instance with zstd / lz).
+  - But is it such a good idea?  Users should prefer compression at
+    the level of the file system.
 
 ** Change log
 
