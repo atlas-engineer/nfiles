@@ -28,7 +28,8 @@ Their path expands to #p\"\".
 If you want to know where a `file' would have expanded in another profile, use `resolve'."))
 
 (export-always '*default-profile*)
-(defvar *default-profile* (make-instance 'profile))
+(defvar *default-profile* (make-instance 'profile)
+  "The fallback profile for files not having overriden one.")
 
 (define-class file ()
   ((base-path
@@ -602,6 +603,7 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
 (export-always 'exists-p)
 (-> exists-p (file) boolean)
 (defun exists-p (file)
+  "Boolean-ensured `uiop:file-exists-p' wrapper for `file'."
   (the (values boolean &optional)
        (sera:true (uiop:file-exists-p (expand file)))))
 
