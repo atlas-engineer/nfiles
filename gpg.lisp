@@ -4,16 +4,19 @@
 (in-package :nfiles/gpg)
 
 (export-always '*gpg-program*)
-(defvar *gpg-program* "gpg")
+(defvar *gpg-program* "gpg"
+  "The program to use for GPG key management.")
 
 (export-always '*gpg-default-recipient*)
-(defvar *gpg-default-recipient* nil)
+(defvar *gpg-default-recipient* nil
+  "The default recipient (likely email) for the keys.")
 
 (define-class gpg-uid ()
   ((validity)
    (user-id))
   (:export-class-name-p t)
-  (:export-accessor-names-p t))
+  (:export-accessor-names-p t)
+  (:documentation "User ID for the given GPG key."))
 
 (define-class gpg-key ()
   ((key-length)
@@ -28,7 +31,8 @@
    (fingerprint)
    (keygrip))
   (:export-class-name-p t)
-  (:export-accessor-names-p t))
+  (:export-accessor-names-p t)
+  (:documentation "Representation of GPG key as given by `*gpg-program*'."))
 
 (defun parse-gpg-secret-keys-output (output-string)
   "Return the list of sections as a list of strings."
