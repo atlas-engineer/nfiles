@@ -40,4 +40,4 @@
   :defsystem-depends-on ("nasdf")
   :class :nasdf-compilation-test-system
   :depends-on (nfiles)
-  :packages (:nfiles))
+  :packages (:nfiles :nfiles/gpg))
