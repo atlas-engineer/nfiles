@@ -273,7 +273,7 @@ See `expand' for a convenience wrapper."))
   "Clean up the result before returning it."
   (let ((path (call-next-method)))
     (if (nil-pathname-p path)
-        path
+        #p""                         ; Ensure consistent `pathname' return type.
         (uiop:ensure-pathname path
                               :truenamize t))))
 
