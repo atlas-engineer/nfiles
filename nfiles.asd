@@ -6,6 +6,8 @@
   :description "Manage file persistence and loading."
   :author "Atlas Engineer LLC"
   :homepage "https://github.com/atlas-engineer/nfiles"
+  :bug-tracker "https://github.com/atlas-engineer/nfiles/issues"
+  :source-control (:git "https://github.com/atlas-engineer/nfiles.git")
   :license "BSD 3-Clause"
   :in-order-to ((test-op (test-op "nfiles/tests")
                          (test-op "nfiles/tests/compilation")))
