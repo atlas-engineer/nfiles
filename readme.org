@@ -196,6 +196,11 @@ Some notes:
 
 ** Change log
 
+*** 1.1.3
+
+- Ensure a =cl:pathname= is returned from =resolve=.
+- Complete some missing documentation.
+
 *** 1.1.2
 
 - Add restarter functions for =ask=, =reload=, etc.
