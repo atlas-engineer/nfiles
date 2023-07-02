@@ -300,14 +300,48 @@ See `expand' for a convenience wrapper."))
       path
       (funcall xdg-fun path)))
 
-(defmethod resolve ((profile profile) (file config-file))
-  (maybe-xdg #'uiop:xdg-config-home (call-next-method)))
+#-flatpak
+(progn
+  (defmethod resolve ((profile profile) (file config-file))
+    (maybe-xdg #'uiop:xdg-config-home (call-next-method)))
 
-(defmethod resolve ((profile profile) (file cache-file))
-  (maybe-xdg #'uiop:xdg-cache-home (call-next-method)))
+  (defmethod resolve ((profile profile) (file cache-file))
+    (maybe-xdg #'uiop:xdg-cache-home (call-next-method)))
 
-(defmethod resolve ((profile profile) (file data-file))
-  (maybe-xdg #'uiop:xdg-data-home (call-next-method)))
+  (defmethod resolve ((profile profile) (file data-file))
+    (maybe-xdg #'uiop:xdg-data-home (call-next-method))))
+
+#+flatpak
+(progn
+  (defun flatpak-xdg-config-home (&rest more)
+    "Based on `uiop:xdg-config-home'."
+    (uiop:resolve-absolute-location
+     `(,(or (uiop:getenv-absolute-directory "HOST_XDG_CONFIG_HOME")
+            (uiop:subpathname (user-homedir-pathname) ".config/"))
+       ,more)))
+
+  (defun flatpak-xdg-cache-home (&rest more)
+    "Based on `uiop:xdg-cache-home'."
+    (uiop:resolve-absolute-location
+     `(,(or (uiop:getenv-absolute-directory "HOST_XDG_CACHE_HOME")
+            (uiop:subpathname* (user-homedir-pathname) ".cache/"))
+       ,more)))
+
+  (defun flatpak-xdg-data-home (&rest more)
+    "Based on `uiop:xdg-data-home'."
+    (uiop:resolve-absolute-location
+     `(,(or (uiop:getenv-absolute-directory "HOST_XDG_DATA_HOME")
+            (uiop:subpathname (user-homedir-pathname) ".local/share/"))
+       ,more)))
+
+  (defmethod resolve ((profile profile) (file config-file))
+    (maybe-xdg #'flatpak-xdg-config-home (call-next-method)))
+
+  (defmethod resolve ((profile profile) (file cache-file))
+    (maybe-xdg #'flatpak-xdg-cache-home (call-next-method)))
+
+  (defmethod resolve ((profile profile) (file data-file))
+    (maybe-xdg #'flatpak-xdg-data-home (call-next-method))))
 
 (defmethod resolve ((profile profile) (file runtime-file))
   (maybe-xdg #'uiop:xdg-runtime-dir (call-next-method)))
