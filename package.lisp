@@ -114,3 +114,5 @@ Do not expect too much from it."))
   (dolist (package '(:nfiles/gpg :nfiles))
     (trivial-package-local-nicknames:add-package-local-nickname :alex :alexandria package)
     (trivial-package-local-nicknames:add-package-local-nickname :sera :serapeum package)))
+
+(when (uiop:getenvp "FLATPAK_ID") (push :flatpak *features*))
