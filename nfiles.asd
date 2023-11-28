@@ -9,8 +9,6 @@
   :bug-tracker "https://github.com/atlas-engineer/nfiles/issues"
   :source-control (:git "https://github.com/atlas-engineer/nfiles.git")
   :license "BSD 3-Clause"
-  :in-order-to ((test-op (test-op "nfiles/tests")
-                         (test-op "nfiles/tests/compilation")))
   :depends-on (alexandria
                #-(and sbcl (not android))
                iolib/os
@@ -20,26 +18,19 @@
                trivial-garbage
                trivial-package-local-nicknames
                trivial-types)
-  :components
-  ((:file "pathname-helpers")
-   (:file "package")
-   (:file "conditions")
-   (:file "gpg")
-   (:file "nfiles")))
-
-(defsystem "nfiles/submodules"
-  :defsystem-depends-on ("nasdf")
-  :class :nasdf-submodule-system)
+  :components ((:file "pathname-helpers")
+               (:file "package")
+               (:file "conditions")
+               (:file "gpg")
+               (:file "nfiles"))
+  :in-order-to ((test-op (test-op "nfiles/tests"))))
 
 (defsystem "nfiles/tests"
-  :defsystem-depends-on ("nasdf")
-  :class :nasdf-test-system
-  :depends-on (nfiles)
-  :targets (:package :nfiles/tests)
-  :components ((:file "tests/tests")))
-
-(defsystem "nfiles/tests/compilation"
-  :defsystem-depends-on ("nasdf")
-  :class :nasdf-compilation-test-system
-  :depends-on (nfiles)
-  :packages (:nfiles :nfiles/gpg))
+  :depends-on ("nfiles" "lisp-unit2")
+  :pathname "tests/"
+  :components ((:file "tests"))
+  :perform (test-op (op c)
+                    (eval-input
+                     "(lisp-unit2:run-tests
+                       :package :nfiles/tests
+                       :run-contexts #'lisp-unit2:with-summary-context)")))
