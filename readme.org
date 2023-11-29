@@ -196,6 +196,10 @@ Some notes:
 
 ** Change log
 
+*** 1.1.4
+
+- Remove =NASDF= as a dependency.
+
 *** 1.1.3
 
 - Ensure a =cl:pathname= is returned from =resolve=.
