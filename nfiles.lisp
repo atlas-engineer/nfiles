@@ -587,7 +587,7 @@ If file is already on disk and younger than `update-interval', call next
   (if (and (not skip-update)
            (not (url-empty-p (url file)))
            (or force-update
-               (not (uiop:file-exists-p file))
+               (not (uiop:file-exists-p (expand file)))
                (updatable-p file)))
       ;; We bind the handler against `T' because some networking library raise non-error conditions.
       (restart-case (handler-bind ((t (auto-restarter (on-fetch-error file))))
