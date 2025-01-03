@@ -634,13 +634,6 @@ It's a convenience wrapper around `resolve' (to avoid specifying the `profile').
   (the (values pathname &optional)
        (resolve (profile file) file)))
 
-(export-always 'exists-p)
-(-> exists-p (file) boolean)
-(defun exists-p (file)
-  "Boolean-ensured `uiop:file-exists-p' wrapper for `file'."
-  (the (values boolean &optional)
-       (sera:true (uiop:file-exists-p (expand file)))))
-
 ;; We need a cache system to avoid reading a file that's already in memory (from
 ;; another data file).
 ;; We also don't want to needlessly duplicate the content in memory.
